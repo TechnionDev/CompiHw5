@@ -14,7 +14,6 @@ using std::shared_ptr;
 using std::string;
 using std::vector;
 
-namespace hw3 {
 typedef enum {
     STStatements,
     STStatement,
@@ -56,14 +55,18 @@ class VarTypeNameC : public RetTypeNameC {
 
 class ExpC : public STypeC {
     string type;
+    string reg;
 
    public:
+    [[deprecated("This constructor should not be used anymore")]];
     ExpC(const string &type);
     const string &getType() const;
     bool isInt() const;
     bool isBool() const;
     bool isString() const;
     bool isByte() const;
+    // Get result of bin operation on two expressions
+    static shared_ptr<ExpC> getBinOpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op);
 };
 
 class IdC : public STypeC {
@@ -134,14 +137,13 @@ bool isImpliedCastAllowed(shared_ptr<STypeC> rawExp1, shared_ptr<STypeC> rawExp2
 bool areStrTypesCompatible(const string &typeStr1, const string &typeStr2);
 void verifyBoolType(shared_ptr<STypeC> exp);
 void verifyMainExists(SymbolTable &symbolTable);
-}  // namespace hw3
 
-#define YYSTYPE hw3::STypePtr
-#define NEW(x, y) (std::shared_ptr<hw3::x>(new hw3::x y))
-#define NEWSTD(x) (std::shared_ptr<hw3::StdType<x> >(new hw3::StdType<x>(x())))
-#define NEWSTD_V(x, y) (std::shared_ptr<hw3::StdType<x> >(new hw3::StdType<x>(x y)))
+#define YYSTYPE STypePtr
+#define NEW(x, y) (std::shared_ptr<x>(new x y))
+#define NEWSTD(x) (std::shared_ptr<StdType<x> >(new StdType<x>(x())))
+#define NEWSTD_V(x, y) (std::shared_ptr<StdType<x> >(new StdType<x>(x y)))
 #define STYPE2STD(t, x) (dynamic_pointer_cast<StdType<t> >(x)->getValue())
-#define DC(t, x) (dynamic_pointer_cast<hw3::t>(x))
+#define DC(t, x) (dynamic_pointer_cast<t>(x))
 #define VECS(x) STYPE2STD(vector<string>, x)
 
 #endif
