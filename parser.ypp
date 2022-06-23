@@ -15,32 +15,18 @@
 
 namespace yy {
 using namespace output;
-using namespace hw3;
 using namespace std;
 }
 using namespace output;
-using namespace hw3;
 using namespace std;
 
-hw3::SymbolTable symbolTable;
+SymbolTable symbolTable;
 
 %}
 
 %code requires {
    #include "stypes.hpp"
 }
-
-/* %define api.prefix {hw3} */
-
-/* %union {
-    std::shared_ptr<hw3::ExpC> exp;
-    std::shared_ptr<hw3::VarTypeNameC> varTypeName;
-    std::shared_ptr<hw3::RetTypeNameC> retType;
-    std::shared_ptr<std::vector<std::string> > idList;
-    std::shared_ptr<std::vector<std::string> > typeList;
-    std::shared_ptr<hw3::IdC> id;
-    std::shared_ptr<hw3::StringC> idName;
-} */
 
 /* Declarations */
 %nonassoc VOID

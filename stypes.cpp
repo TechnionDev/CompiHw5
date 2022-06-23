@@ -1,11 +1,11 @@
 #include "stypes.hpp"
 
 #include "hw3_output.hpp"
+#include "parser.tab.hpp"
+#include "ralloc.hpp"
 
 using namespace output;
 using std::reverse;
-
-namespace hw3 {
 
 STypeC::STypeC(SymbolType symType) : symType(symType) {}
 
@@ -14,7 +14,6 @@ const string &verifyAllTypeNames(const string &type) {
         return type;
     } else {
         errorMismatch(yylineno);
-        exit(1);
     }
 }
 
@@ -23,7 +22,6 @@ const string &verifyValTypeName(const string &type) {
         return type;
     } else {
         errorMismatch(yylineno);
-        exit(1);
     }
 }
 
@@ -32,7 +30,6 @@ const string &verifyRetTypeName(const string &type) {
         return type;
     } else {
         errorMismatch(yylineno);
-        exit(1);
     }
 }
 
@@ -41,7 +38,6 @@ const string &verifyVarTypeName(const string &type) {
         return type;
     } else {
         errorMismatch(yylineno);
-        exit(1);
     }
 }
 
@@ -49,9 +45,7 @@ RetTypeNameC::RetTypeNameC(const string &type) : STypeC(STRetType), type(verifyR
 
 VarTypeNameC::VarTypeNameC(const string &type) : RetTypeNameC(verifyVarTypeName(type)) {}
 
-ExpC::ExpC(const string &type) : STypeC(STExpression), type(verifyValTypeName(type)) {}
-
-CallC::CallC(const string &type, const string &symbol) : STypeC(STCall), type(verifyRetTypeName(type)), symbol(symbol) {}
+ExpC::ExpC(const string &type) : STypeC(STExpression), type(verifyValTypeName(type), reg("")) {}
 
 bool ExpC::isInt() const {
     return this->type == "INT";
@@ -69,6 +63,42 @@ bool ExpC::isByte() const {
     return this->type == "BYTE";
 }
 
+shared_ptr<ExpC> ExpC::getBinOpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op) {
+    shared_ptr<ExpC> exp1 = DC(ExpC, rawExp1);
+    shared_ptr<ExpC> exp2 = DC(ExpC, rawExp2);
+    shared_ptr<ExpC> resultExp;
+    string resultType;
+    string opStr;
+    string resultReg = Ralloc::getInstance().getNextReg();
+
+    if (not isImpliedCastAllowed(stype1, stype2)) {
+        errorMismatch(yylineno);
+    }
+
+    resultType = (exp1->isInt() or exp2->isInt()) ? "INT" : "BYTE";
+
+    // Emit the llvm ir code
+    switch (op) {
+        case ADDOP:
+            opStr = "add";
+            break;
+        case SUBOP:
+            opStr = "sub";
+            break;
+        case MULOP:
+            opStr = "mul";
+            break;
+        case DIVOP:
+            // BYTE is upcasted to INT
+            opStr = resultType == "INT" ? "sdiv" : "udiv";
+            break;
+        default:
+            errorMismatch(yylineno);
+    }
+    
+
+}
+
 const string &ExpC::getType() const { return type; }
 
 IdC::IdC(const string &varName, const string &type) : STypeC(STId), name(varName), type(verifyVarTypeName(type)) {}
@@ -80,6 +110,8 @@ const string &IdC::getName() const {
 const string &IdC::getType() const {
     return this->type;
 }
+
+CallC::CallC(const string &type, const string &symbol) : STypeC(STCall), type(verifyRetTypeName(type)), symbol(symbol) {}
 
 FuncIdC::FuncIdC(const string &name, const string &type, const vector<string> &argTypes) : IdC(name, "BAD_VIRTUAL_CALL"), argTypes(argTypes) {
     this->retType = verifyRetTypeName(type);
@@ -256,5 +288,3 @@ void verifyMainExists(SymbolTable &symbolTable) {
 
     symbolTable.removeScope();
 }
-
-}  // namespace hw3

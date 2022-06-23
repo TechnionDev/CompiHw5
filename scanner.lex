@@ -5,7 +5,6 @@
     #include "parser.tab.hpp"
     #include "hw3_output.hpp"
 
-    using namespace hw3;
     using namespace output;
 
     char current_str[1025];
@@ -54,8 +53,10 @@ escapechars     ([\\"nrt0])
 (=)                                 return ASSIGN;
 ((\<=)|(\>=)|(\<)|(\>))             return RELOP;
 ((==)|(!=))                         return EQOP;
-((\+)|(\-))                         return PLUSOP;
-((\*)|(\/))                         return MULTOP;
+(\+)                                return ADDOP;
+(\-)                                return SUBOP;
+(\*)                                return MULOP;
+(\/)                                return DIVOP;
 (\/\/[^\r\n]*[ \r|\n|\r\n]?)        ; // Handle comment
 ({letter}({letter}|{digit})*)       {yylval = NEWSTD_V(std::string, (yytext)); return ID;}
 (0{digit}+)                         error_unprintable_char(*yytext);
