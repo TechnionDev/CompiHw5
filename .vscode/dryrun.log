@@ -1,8 +1,0 @@
-make --dry-run --keep-going --print-directory
-make: Entering directory `/Users/gtelem/pgit/CompiHw5'
-rm -f lex.yy.c parser.tab.*pp hw5 amiti_gurt_hw5.zip
-flex scanner.lex
-/opt/homebrew/opt/bison/bin/bison -Wcounterexamples -d parser.ypp
-g++ -std=c++17 -o hw5 *.c *.cpp
-make: Leaving directory `/Users/gtelem/pgit/CompiHw5'
- 
