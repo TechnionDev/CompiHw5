@@ -13,7 +13,7 @@ class Ralloc {
 
    public:
     // Get the singleton instance
-    static Ralloc &getInstance();
+    static Ralloc &instance();
     // Get the next available register
     std::string getNextReg();
 };

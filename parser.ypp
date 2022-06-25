@@ -39,7 +39,6 @@ SymbolTable symbolTable;
 %nonassoc FALSE
 %nonassoc RETURN
 %nonassoc IF
-
 %nonassoc WHILE
 %nonassoc BREAK
 %nonassoc CONTINUE
@@ -55,8 +54,8 @@ SymbolTable symbolTable;
 %left AND
 %left EQOP
 %left RELOP
-%left PLUSOP
-%left MULTOP
+%left ADDOP SUBOP
+%left MULOP DIVOP
 %right NOT
 %left LPAREN
 %left RPAREN
@@ -204,24 +203,10 @@ Type:           INT                                 {$$ = NEW(VarTypeNameC, ("IN
                 ;
 BoolExp: Exp                                        {verifyBoolType($1); $$ = $1;}
 Exp:            LPAREN Exp RPAREN                   {$$ = $2;}
-                | Exp PLUSOP Exp                    {
-                                                        if (not isImpliedCastAllowed($1, $3)) {
-                                                            errorMismatch(yylineno);
-                                                        } else if (DC(ExpC, $1)->isInt() or DC(ExpC, $3)->isInt()) {
-                                                            $$ = NEW(ExpC,("INT"));
-                                                        } else /* Both are bytes */ {
-                                                            $$ = NEW(ExpC,("BYTE"));
-                                                        }
-                                                    }
-                | Exp MULTOP Exp                    {
-                                                        if (not isImpliedCastAllowed($1, $3)) {
-                                                            errorMismatch(yylineno);
-                                                        } else if (DC(ExpC, $1)->isInt() or DC(ExpC, $3)->isInt()) {
-                                                            $$ = NEW(ExpC,("INT"));
-                                                        } else /* Both are bytes */ {
-                                                            $$ = NEW(ExpC,("BYTE"));
-                                                        }
-                                                    }
+                | Exp ADDOP Exp                    { $$ = ExpC::getBinOpResult($1, $3, $2); }
+                | Exp SUBOP Exp                    { $$ = ExpC::getBinOpResult($1, $3, $2); }
+                | Exp MULOP Exp                    { $$ = ExpC::getBinOpResult($1, $3, $2); }
+                | Exp DIVOP Exp                    { $$ = ExpC::getBinOpResult($1, $3, $2); }
                 | ID                                {$$ = NEW(ExpC,(GET_SYMTYPE($1)));}
                 | Call                              {$$ = NEW(ExpC,(DC(RetTypeNameC, $1)->getTypeName()));}
                 | NUM                               {$$ = NEW(ExpC,("INT"));}
