@@ -22,6 +22,9 @@ typedef enum {
     STRetType
 } SymbolType;
 
+typedef int Offset;
+typedef shared_ptr<STypeC> STypePtr;
+
 const string &verifyAllTypeNames(const string &type);
 const string &verifyValTypeName(const string &type);
 const string &verifyRetTypeName(const string &type);
@@ -34,8 +37,6 @@ class STypeC {
     STypeC(SymbolType symType);
     virtual ~STypeC() = default;
 };
-
-typedef shared_ptr<STypeC> STypePtr;
 
 class RetTypeNameC : public STypeC {
     string type;
@@ -78,6 +79,7 @@ class ExpC : public STypeC {
 class IdC : public STypeC {
     string name;
     string type;
+    Offset offset;
 
    public:
     IdC(const string &varName, const string &type);

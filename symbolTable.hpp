@@ -12,11 +12,11 @@ using std::shared_ptr;
 using std::string;
 
 class SymbolTable {
-    map<string, shared_ptr<IdC> > symTbl;
-    vector<int> scopeStartOffsets;
+    map<string, shared_ptr<IdC>> symTbl;
+    vector<Offset> scopeStartOffsets;
     vector<string> formals;
-    vector<vector<string> > scopeSymbols;
-    int currOffset;
+    vector<vector<string>> scopeSymbols;
+    Offset currOffset;
 
    public:
     shared_ptr<RetTypeNameC> retType;

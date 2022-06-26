@@ -35,7 +35,7 @@ void SymbolTable::removeScope() {
     if (this->scopeSymbols.size() == 2) {
         this->currOffset = 0;
         // For each string in the last scope, remove it from the symbol table
-        int offset = -1;
+        Offset offset = -1;
         for (int i = this->formals.size() - 1; i >= 0; i--) {
             printID(this->formals[i], offset--, this->symTbl[this->formals[i]]->getType());
             this->symTbl.erase(this->formals[i]);
@@ -44,7 +44,7 @@ void SymbolTable::removeScope() {
     } else {
         this->currOffset -= this->scopeSymbols.back().size();
     }
-    int offset = this->scopeStartOffsets.back();
+    Offset offset = this->scopeStartOffsets.back();
     for (string s : this->scopeSymbols.back()) {
         if ((funcId = DC(FuncIdC, this->symTbl[s])) != nullptr) {
             funcTypeStr = makeFunctionType(funcId->getType(), funcId->getArgTypes());
@@ -115,7 +115,7 @@ shared_ptr<FuncIdC> SymbolTable::getFuncSymbol(const string &name, bool shouldEr
 }
 
 void SymbolTable::printSymbolTable() {
-    int offset = 0;
+    Offset offset = 0;
     for (auto it = this->symTbl.begin(); it != this->symTbl.end(); ++it) {
         printID(it->first, offset++, it->second->getType());
     }

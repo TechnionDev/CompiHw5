@@ -198,41 +198,33 @@ ExpList:        Exp                                 {
                                                         $$ = $3;
                                                     }
                 ;
-Type:           INT                                 {$$ = NEW(VarTypeNameC, ("INT"));}
-                | BYTE                              {$$ = NEW(VarTypeNameC, ("BYTE"));}
-                | BOOL                              {$$ = NEW(VarTypeNameC, ("BOOL"));}
+Type:           INT                                 { $$ = NEW(VarTypeNameC, ("INT")); }
+                | BYTE                              { $$ = NEW(VarTypeNameC, ("BYTE")); }
+                | BOOL                              { $$ = NEW(VarTypeNameC, ("BOOL")); }
                 ;
-BoolExp: Exp                                        {verifyBoolType($1); $$ = $1;}
-Exp:            LPAREN Exp RPAREN                   {$$ = $2;}
-                | Exp ADDOP Exp                    { $$ = ExpC::getBinOpResult($1, $3, $2); }
-                | Exp SUBOP Exp                    { $$ = ExpC::getBinOpResult($1, $3, $2); }
-                | Exp MULOP Exp                    { $$ = ExpC::getBinOpResult($1, $3, $2); }
-                | Exp DIVOP Exp                    { $$ = ExpC::getBinOpResult($1, $3, $2); }
-                | ID                                {$$ = NEW(ExpC,(GET_SYMTYPE($1)));} // TODO: Implement
-                | Call                              {$$ = NEW(ExpC,(DC(RetTypeNameC, $1)->getTypeName()));} // TODO: Implement
-                | NUM                               {$$ = NEW(ExpC,("INT", STYPE2STD(string, $1)));}
-                | NUM B                             {$$ = NEW(ExpC,("BYTE", STYPE2STD(string, $1)));}
-                | STRING                            {$$ = NEW(ExpC,("STRING", STYPE2STD(string, $1)));}
-                | TRUE                              {$$ = NEW(ExpC,("BOOL", "1"));}
-                | FALSE                             {$$ = NEW(ExpC,("BOOL", "0"));}
-                | NOT Exp                           {$$ = ExpC::evalBool($2, nullptr, NOT);}
-                | Exp AND Exp                       {$$ = ExpC::evalBool($1, $3, AND);}
-                | Exp OR Exp                        {$$ = ExpC::evalBool($1, $3, OR);}
-                | Exp GEOP Exp                      {$$ = ExpC::getCmpResult($1, $3, GEOP);}
-                | Exp GTOP Exp                      {$$ = ExpC::getCmpResult($1, $3, GTOP);}
-                | Exp LEOP Exp                      {$$ = ExpC::getCmpResult($1, $3, LEOP);}
-                | Exp LTOP Exp                      {$$ = ExpC::getCmpResult($1, $3, LTOP);}
-                | Exp EQOP Exp                      {$$ = ExpC::getCmpResult($1, $3, EQOP);}
-                | Exp NEOP Exp                      {$$ = ExpC::getCmpResult($1, $3, NEOP);}
-                | LPAREN Type RPAREN Exp            { 
-                                                        auto castDstType = DC(VarTypeNameC, $2)->getTypeName();
-                                                        auto castSrcType = DC(ExpC, $4)->getType();
-                                                        if (not areStrTypesCompatible(castDstType, castSrcType) 
-                                                            and not areStrTypesCompatible(castSrcType, castDstType)) {
-                                                                errorMismatch(yylineno);
-                                                        }
-                                                        $$ = NEW(ExpC, (castDstType));
-                                                    }
+BoolExp: Exp                                        { verifyBoolType($1); $$ = $1; }
+Exp:            LPAREN Exp RPAREN                   { $$ = $2; }
+                | Exp ADDOP Exp                     { $$ = ExpC::getBinOpResult($1, $3, $2); }
+                | Exp SUBOP Exp                     { $$ = ExpC::getBinOpResult($1, $3, $2); }
+                | Exp MULOP Exp                     { $$ = ExpC::getBinOpResult($1, $3, $2); }
+                | Exp DIVOP Exp                     { $$ = ExpC::getBinOpResult($1, $3, $2); }
+                | ID                                { $$ = NEW(ExpC,(GET_SYMTYPE($1))); } // TODO: Implement
+                | Call                              { $$ = NEW(ExpC,(DC(RetTypeNameC, $1)->getTypeName())); } // TODO: Implement
+                | NUM                               { $$ = NEW(ExpC,("INT", STYPE2STD(string, $1))); }
+                | NUM B                             { $$ = NEW(ExpC,("BYTE", STYPE2STD(string, $1))); }
+                | STRING                            { $$ = NEW(ExpC,("STRING", STYPE2STD(string, $1))); }
+                | TRUE                              { $$ = NEW(ExpC,("BOOL", "1")); }
+                | FALSE                             { $$ = NEW(ExpC,("BOOL", "0")); }
+                | NOT Exp                           { $$ = ExpC::evalBool($2, nullptr, NOT); }
+                | Exp AND Exp                       { $$ = ExpC::evalBool($1, $3, AND); }
+                | Exp OR Exp                        { $$ = ExpC::evalBool($1, $3, OR); }
+                | Exp GEOP Exp                      { $$ = ExpC::getCmpResult($1, $3, GEOP); }
+                | Exp GTOP Exp                      { $$ = ExpC::getCmpResult($1, $3, GTOP); }
+                | Exp LEOP Exp                      { $$ = ExpC::getCmpResult($1, $3, LEOP); }
+                | Exp LTOP Exp                      { $$ = ExpC::getCmpResult($1, $3, LTOP); }
+                | Exp EQOP Exp                      { $$ = ExpC::getCmpResult($1, $3, EQOP); }
+                | Exp NEOP Exp                      { $$ = ExpC::getCmpResult($1, $3, NEOP); }
+                | LPAREN Type RPAREN Exp            { $$ = NEW(ExpC, ($2, $4)); }
                 ;
 %%
 
