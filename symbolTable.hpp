@@ -20,6 +20,7 @@ class SymbolTable {
 
    public:
     shared_ptr<RetTypeNameC> retType;
+    string stackVariablesPtrReg;
     int nestedLoopDepth;
     SymbolTable();
     ~SymbolTable();
