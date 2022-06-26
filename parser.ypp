@@ -196,7 +196,7 @@ Exp:            LPAREN Exp RPAREN                   { $$ = $2; }
                 | Call                              { $$ = $1 != nullptr ? $1: throw "Can't derive Call from Exp for void functions"; } // TODO: Implement
                 | NUM                               { $$ = NEW(ExpC,("INT", STYPE2STD(string, $1))); }
                 | NUM B                             { $$ = NEW(ExpC,("BYTE", STYPE2STD(string, $1))); }
-                | STRING                            { $$ = NEW(ExpC,("STRING", STYPE2STD(string, $1))); } // TODO: Implement
+                | STRING                            { $$ = ExpC::loadStringLiteralAddr(STYPE2STD(string, $1)); }
                 | TRUE                              { $$ = NEW(ExpC,("BOOL", "1")); }
                 | FALSE                             { $$ = NEW(ExpC,("BOOL", "0")); }
                 | NOT Exp                           { $$ = ExpC::evalBool($2, nullptr, NOT); }
