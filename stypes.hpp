@@ -1,15 +1,12 @@
 #ifndef STYPES_H_
 #define STYPES_H_
-#include <algorithm>
+
 #include <map>
 #include <memory>
-#include <set>
 #include <string>
 #include <vector>
 
-using std::find;
 using std::map;
-using std::set;
 using std::shared_ptr;
 using std::string;
 using std::vector;
@@ -55,11 +52,14 @@ class VarTypeNameC : public RetTypeNameC {
 
 class ExpC : public STypeC {
     string type;
-    string reg;
+    string registerOrImmediate;
+
+    AddressList boolFalseList;
+    AddressList boolTrueList;
+    string expStartLabel;
 
    public:
-    [[deprecated("This constructor should not be used anymore")]];
-    ExpC(const string &type);
+    ExpC(const string &type, const string &reg);
     const string &getType() const;
     bool isInt() const;
     bool isBool() const;
@@ -67,6 +67,10 @@ class ExpC : public STypeC {
     bool isByte() const;
     // Get result of bin operation on two expressions
     static shared_ptr<ExpC> getBinOpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op);
+    // Short-Circuit eval bool value
+    static shared_ptr<ExpC> evalBool(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op);
+    // Get shared_ptr<ExpC> from the result of comparing exp1 and exp2
+    static shared_ptr<ExpC> getCmpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op);
 };
 
 class IdC : public STypeC {
@@ -88,27 +92,6 @@ class FuncIdC : public IdC {
     const vector<string> &getArgTypes() const;
     vector<string> &getArgTypes();
     const string &getType() const;
-};
-
-class SymbolTable {
-    map<string, shared_ptr<IdC> > symTbl;
-    vector<int> scopeStartOffsets;
-    vector<string> formals;
-    vector<vector<string> > scopeSymbols;
-    int currOffset;
-
-   public:
-    shared_ptr<RetTypeNameC> retType;
-    int nestedLoopDepth;
-    SymbolTable();
-    ~SymbolTable();
-    void addScope(int funcArgCount = 0);
-    void removeScope();
-    void addSymbol(const string &name, shared_ptr<IdC> type);
-    void addFormal(shared_ptr<IdC> type);
-    shared_ptr<IdC> getVarSymbol(const string &name);
-    shared_ptr<FuncIdC> getFuncSymbol(const string &name, bool shouldError = true);
-    void printSymbolTable();
 };
 
 class CallC : public STypeC {
@@ -136,7 +119,6 @@ class StdType : public STypeC {
 bool isImpliedCastAllowed(shared_ptr<STypeC> rawExp1, shared_ptr<STypeC> rawExp2);
 bool areStrTypesCompatible(const string &typeStr1, const string &typeStr2);
 void verifyBoolType(shared_ptr<STypeC> exp);
-void verifyMainExists(SymbolTable &symbolTable);
 
 #define YYSTYPE STypePtr
 #define NEW(x, y) (std::shared_ptr<x>(new x y))

@@ -1,3 +1,8 @@
+.vscode/
+.DS_Store
+lex.yy.c
+*.tab.*
+
 # Prerequisites
 *.d
 

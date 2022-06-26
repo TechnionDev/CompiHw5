@@ -10,6 +10,9 @@ using namespace std;
 //for an unconditional branch (which contains only a single label) use FIRST.
 enum BranchLabelIndex {FIRST, SECOND};
 
+typedef pair<int,BranchLabelIndex> AddressIndPair;
+typedef vector<AddressIndPair> AddressList;
+
 class CodeBuffer{
 	CodeBuffer();
 	CodeBuffer(CodeBuffer const&);
