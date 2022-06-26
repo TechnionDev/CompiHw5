@@ -286,6 +286,40 @@ shared_ptr<ExpC> ExpC::getCmpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC
     return NEW(ExpC, ("BOOL", resultReg));
 }
 
+shared_ptr<ExpC> ExpC::getCastResult(shared_ptr<STypeC> dstStype, shared_ptr<STypeC> expStype) {
+    shared_ptr<ExpC> exp = DC(ExpC, expStype);
+
+    if (not exp) {
+        throw "getCastResult must get _Nonnull ExpC";
+    }
+
+    shared_ptr<VarTypeNameC> dstType = DC(VarTypeNameC, dstStype);
+
+    if (not dstType) {
+        throw "getCastResult must get a _Nonnull VarTypeNameC";
+    }
+
+    if (not areStrTypesCompatible(exp->getType(), dstType->getTypeName()) and not areStrTypesCompatible(dstType->getTypeName(), exp->getType())) {
+        errorMismatch(yylineno);
+        // Warning supression: the prev line will exit
+        return nullptr;
+    }
+
+    Ralloc &ralloc = Ralloc::instance();
+    CodeBuffer &codeBuffer = CodeBuffer::instance();
+
+    string resultReg = ralloc.getNextReg();
+
+    if (exp1->isInt() and exp2->isByte()) {
+        codeBuffer.emit(resultReg + " = trunc i32 " + exp1RegOrImm + " to i8");
+    } else if (exp1->isByte() and exp2->isInt()) {
+        codeBuffer.emit(resultReg + " = zext i8 " + exp1RegOrImm + " to i32");
+    } else {
+        codeBuffer.emit(resultReg + " = " + exp1RegOrImm);
+    }
+    return NEW(ExpC, ("INT", resultReg));
+}
+
 const string &ExpC::getType() const { return type; }
 
 IdC::IdC(const string &varName, const string &type) : STypeC(STId), name(varName), type(verifyVarTypeName(type)) {}
