@@ -215,15 +215,9 @@ Exp:            LPAREN Exp RPAREN                   {$$ = $2;}
                 | STRING                            {$$ = NEW(ExpC,("STRING", STYPE2STD(string, $1)));}
                 | TRUE                              {$$ = NEW(ExpC,("BOOL", "1"));}
                 | FALSE                             {$$ = NEW(ExpC,("BOOL", "0"));}
-                | NOT Exp                           {
-                                                        if (not DC(ExpC, $2)->isBool()) {
-                                                            errorMismatch(yylineno);
-                                                        }
-
-                                                        $$ = NEW(ExpC, ("BOOL"));
-                                                    }
-                | Exp AND Exp                       {$$ = NEW(ExpC,("BOOL"));}
-                | Exp OR Exp                        {$$ = NEW(ExpC,("BOOL"));}
+                | NOT Exp                           {$$ = ExpC::evalBool($2, nullptr, NOT);}
+                | Exp AND Exp                       {$$ = ExpC::evalBool($1, $3, AND);}
+                | Exp OR Exp                        {$$ = ExpC::evalBool($1, $3, OR);}
                 | Exp GEOP Exp                      {$$ = ExpC::getCmpResult($1, $3, GEOP);}
                 | Exp GTOP Exp                      {$$ = ExpC::getCmpResult($1, $3, GTOP);}
                 | Exp LEOP Exp                      {$$ = ExpC::getCmpResult($1, $3, LEOP);}
