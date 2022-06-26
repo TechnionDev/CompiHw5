@@ -51,8 +51,12 @@ escapechars     ([\\"nrt0])
 (\{)                                return LBRACE;
 (\})                                return RBRACE;
 (=)                                 return ASSIGN;
-((\<=)|(\>=)|(\<)|(\>))             return RELOP;
-((==)|(!=))                         return EQOP;
+(\>=)                               return GEOP;
+(\>)                                return GOP;
+(\<=)                               return LEOP;
+(\<)                                return LOP;
+((==))                              return EQOP;
+((!=))                              return NEOP;
 (\+)                                return ADDOP;
 (\-)                                return SUBOP;
 (\*)                                return MULOP;

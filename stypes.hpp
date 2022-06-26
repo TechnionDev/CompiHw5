@@ -69,6 +69,8 @@ class ExpC : public STypeC {
     static shared_ptr<ExpC> getBinOpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op);
     // Short-Circuit eval bool value
     static shared_ptr<ExpC> evalBool(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op);
+    // Get shared_ptr<ExpC> from the result of comparing exp1 and exp2
+    static shared_ptr<ExpC> getCmpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op);
 };
 
 class IdC : public STypeC {

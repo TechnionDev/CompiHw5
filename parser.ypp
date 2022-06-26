@@ -52,7 +52,8 @@ SymbolTable symbolTable;
 %right ASSIGN
 %left OR
 %left AND
-%left EQOP
+%left EQOP NEOP
+%left GEOP GTOP LEOP LTOP
 %left RELOP
 %left ADDOP SUBOP
 %left MULOP DIVOP
@@ -209,16 +210,11 @@ Exp:            LPAREN Exp RPAREN                   {$$ = $2;}
                 | Exp DIVOP Exp                    { $$ = ExpC::getBinOpResult($1, $3, $2); }
                 | ID                                {$$ = NEW(ExpC,(GET_SYMTYPE($1)));}
                 | Call                              {$$ = NEW(ExpC,(DC(RetTypeNameC, $1)->getTypeName()));}
-                | NUM                               {$$ = NEW(ExpC,("INT"));}
-                | NUM B                             {
-                                                        if (stoi(STYPE2STD(string, $1)) > 255) {
-                                                            errorByteTooLarge(yylineno, STYPE2STD(string, $1));
-                                                        }
-                                                        $$ = NEW(ExpC,("BYTE"));
-                                                        }
-                | STRING                            {$$ = NEW(ExpC,("STRING"));}
-                | TRUE                              {$$ = NEW(ExpC,("BOOL"));}
-                | FALSE                             {$$ = NEW(ExpC,("BOOL"));}
+                | NUM                               {$$ = NEW(ExpC,("INT", STYPE2STD(string, $1)));}
+                | NUM B                             {$$ = NEW(ExpC,("BYTE", STYPE2STD(string, $1)));}
+                | STRING                            {$$ = NEW(ExpC,("STRING", STYPE2STD(string, $1)));}
+                | TRUE                              {$$ = NEW(ExpC,("BOOL", "1"));}
+                | FALSE                             {$$ = NEW(ExpC,("BOOL", "0"));}
                 | NOT Exp                           {
                                                         if (not DC(ExpC, $2)->isBool()) {
                                                             errorMismatch(yylineno);
@@ -226,34 +222,14 @@ Exp:            LPAREN Exp RPAREN                   {$$ = $2;}
 
                                                         $$ = NEW(ExpC, ("BOOL"));
                                                     }
-                | Exp AND Exp                       {
-                                                        if (not DC(ExpC, $1)->isBool() or not DC(ExpC, $3)->isBool()) {
-                                                            errorMismatch(yylineno);
-                                                        }
-
-                                                        $$ = NEW(ExpC,("BOOL"));
-                                                    }
-                | Exp OR Exp                        {
-                                                        if (not DC(ExpC, $1)->isBool() or not DC(ExpC, $3)->isBool()) {
-                                                            errorMismatch(yylineno);
-                                                        }
-
-                                                        $$ = NEW(ExpC,("BOOL"));
-                                                    }
-                | Exp RELOP Exp                     {
-                                                        if (not isImpliedCastAllowed($1, $3)) {
-                                                            errorMismatch(yylineno);
-                                                        }
-
-                                                        $$ = NEW(ExpC,("BOOL"));
-                                                    }
-                | Exp EQOP Exp                      {
-                                                        if (not isImpliedCastAllowed($1, $3)) {
-                                                            errorMismatch(yylineno);
-                                                        }
-
-                                                        $$ = NEW(ExpC,("BOOL"));
-                                                    }
+                | Exp AND Exp                       {$$ = NEW(ExpC,("BOOL"));}
+                | Exp OR Exp                        {$$ = NEW(ExpC,("BOOL"));}
+                | Exp GEOP Exp                      {$$ = ExpC::getCmpResult($1, $3, GEOP);}
+                | Exp GTOP Exp                      {$$ = ExpC::getCmpResult($1, $3, GTOP);}
+                | Exp LEOP Exp                      {$$ = ExpC::getCmpResult($1, $3, LEOP);}
+                | Exp LTOP Exp                      {$$ = ExpC::getCmpResult($1, $3, LTOP);}
+                | Exp EQOP Exp                      {$$ = ExpC::getCmpResult($1, $3, EQOP);}
+                | Exp NEOP Exp                      {$$ = ExpC::getCmpResult($1, $3, NEOP);}
                 | LPAREN Type RPAREN Exp            { 
                                                         auto castDstType = DC(VarTypeNameC, $2)->getTypeName();
                                                         auto castSrcType = DC(ExpC, $4)->getType();

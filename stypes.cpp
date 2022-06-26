@@ -223,6 +223,69 @@ shared_ptr<ExpC> ExpC::evalBoolExp(shared_ptr<STypeC> stype1, shared_ptr<STypeC>
     return resultExp;
 }
 
+shared_ptr<ExpC> ExpC::getCmpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op) {
+    shared_ptr<ExpC> exp1 = DC(ExpC, stype1);
+    shared_ptr<ExpC> exp2 = DC(ExpC, stype2);
+    if (not exp1 or not exp2) {
+        throw "getCmpResult must get _Nonnull expressions";
+    }
+
+    string cmpOpStr;
+    string regSizeofDecorator;
+
+    if (not isImpliedCastAllowed(stype1, stype2)) {
+        errorMismatch(yylineno);
+        // Warning supression: the prev line will exit
+        return nullptr;
+    }
+
+    Ralloc &ralloc = Ralloc::instance();
+    CodeBuffer &codeBuffer = CodeBuffer::instance();
+
+    string exp1RegOrImm = exp1->registerOrImmediate;
+    string exp2RegOrImm = exp2->registerOrImmediate;
+
+    if (exp1->isInt() or exp2->isInt()) {
+        regSizeofDecorator = " i32 ";
+        if (exp1->isByte() and exp1->registerOrImmediate[0] == '%') {
+            exp1RegOrImm = ralloc.getNextReg();
+            codeBuffer.emit(exp1RegOrImm + " = zext i8 to i32 " + exp1->registerOrImmediate[0]);
+        } else if (exp2->isByte() and exp2->registerOrImmediate[0] == '%') {
+            exp2RegOrImm = ralloc.getNextReg();
+            codeBuffer.emit(exp2RegOrImm + " = zext i8 to i32 " + exp2->registerOrImmediate[0]);
+        }
+    } else {
+        regSizeofDecorator = " i8 ";
+    }
+
+    switch (op) {
+        case EQOP:
+            cmpOpStr = " eq ";
+            break;
+        case NEOP:
+            cmpOpStr = " ne ";
+            break;
+        case GEOP:
+            cmpOpStr = " sge ";
+            break;
+        case GTOP:
+            cmpOpStr = " sgt ";
+            break;
+        case LEOP:
+            cmpOpStr = " sle ";
+            break;
+        case LTOP:
+            cmpOpStr = " slt ";
+            break;
+        default:
+            throw "Unsupported operation to getCmpResult";
+    }
+
+    string resultReg = ralloc.getNextReg();
+    codeBuffer.emit(resultReg + " = icmp " + cmpOpStr + regSizeofDecorator + exp1->registerOrImmediate);
+    return NEW(ExpC, ("BOOL", resultReg));
+}
+
 const string &ExpC::getType() const { return type; }
 
 IdC::IdC(const string &varName, const string &type) : STypeC(STId), name(varName), type(verifyVarTypeName(type)) {}
