@@ -5,6 +5,8 @@
 
 using namespace output;
 
+using std::get;
+
 SymbolTable::SymbolTable() {
     this->nestedLoopDepth = 0;
     this->currOffset = 0;

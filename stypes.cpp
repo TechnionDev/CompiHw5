@@ -53,7 +53,11 @@ RetTypeNameC::RetTypeNameC(const string &type) : STypeC(STRetType), type(verifyR
 
 VarTypeNameC::VarTypeNameC(const string &type) : RetTypeNameC(verifyVarTypeName(type)) {}
 
-ExpC::ExpC(const string &type, const string &regOrImmStr) : STypeC(STExpression), type(verifyValTypeName(type)), registerOrImmediate(regOrImmStr) {}
+ExpC::ExpC(const string &type, const string &regOrImmStr) : STypeC(STExpression), type(verifyValTypeName(type)), registerOrImmediate(regOrImmStr) {
+    if (regOrImmStr[0] != '%' and (type == "INT" or type == "BYTE") and stoi(regOrImmStr) > 255) {
+        errorByteTooLarge(yylineno, regOrImmStr);
+    }
+}
 
 bool ExpC::isInt() const {
     return this->type == "INT";
@@ -109,6 +113,7 @@ shared_ptr<ExpC> ExpC::getBinOpResult(shared_ptr<STypeC> stype1, shared_ptr<STyp
             opStr = "mul";
             break;
         case DIVOP:
+            // TODO: Implement div by 0 error checking and handling
             opStr = divOp;
             break;
         default:
@@ -117,6 +122,105 @@ shared_ptr<ExpC> ExpC::getBinOpResult(shared_ptr<STypeC> stype1, shared_ptr<STyp
 
     codeBuffer.emit(resultReg + " = " + opStr + " " + resultSizeof + " " + exp1->registerOrImmediate + ", " + exp2->registerOrImmediate);
     return shared_ptr<ExpC>(NEW(ExpC, (resultType, resultReg)));
+}
+
+void insertToListsFromLists(AddressList &aListFrom, AddressList &aListTo,
+                            AddressList &bListFrom, AddressList &bListTo) {
+    aListTo.insert(aListTo.end(), aListFrom.begin(), aListFrom.end());
+    bListTo.insert(bListTo.end(), bListFrom.begin(), bListFrom.end());
+}
+
+shared_ptr<ExpC> ExpC::evalBoolExp(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op) {
+    shared_ptr<ExpC> exp1 = DC(ExpC, stype1);
+    shared_ptr<ExpC> exp2 = DC(ExpC, stype2);
+    shared_ptr<ExpC> resultExp;
+    Ralloc &ralloc = Ralloc::instance();
+    CodeBuffer &codeBuffer = CodeBuffer::instance();
+
+    // exp2 == null  <==>  op == NOT
+    if (not exp1 or (op == NOT) != (exp2 == nullptr)) {
+        throw "evalBoolExp must get _Nonnull as first param and the second is _Nullable iff op == NOT";
+    }
+
+    if (not exp1->isBool() or not exp2->isBool()) {
+        errorMismatch(yylineno);
+    }
+    int instAddr;
+    AddressList falseList;
+    AddressList trueList;
+    AddressList nextExpList;
+
+    string exp1StartLabel = "";
+    string exp2StartLabel = "";
+
+    AddressList exp1FirstList;
+    AddressList exp1SecondList;
+
+    AddressList exp2FirstList;
+    AddressList exp2SecondList;
+
+    // Emit the llvm ir code
+    if (exp1->registerOrImmediate[0] != "") {
+        exp1StartLabel = codeBuffer.genLabel();
+        instAddr = codeBuffer.emit("br i1 " + exp1->registerOrImmediate + ", label @, label @");
+        exp1FirstList = CodeBuffer::makelist(make_pair(instAddr, FIRST));
+        exp1SecondList = CodeBuffer::makelist(make_pair(instAddr, SECOND));
+    } else {
+        exp1StartLabel = exp1->expStartLabel;
+        exp1FirstList = exp1->boolTrueList;
+        exp1SecondList = exp1->boolFalseList;
+    }
+
+    if (exp2) {
+        if (exp2->registerOrImmediate[0] != "") {
+            exp2StartLabel = codeBuffer.genLabel();
+            instAddr = codeBuffer.emit("br i1 " + exp2->registerOrImmediate + ", label @, label @");
+            exp2FirstList = CodeBuffer::makelist(make_pair(instAddr, FIRST));
+            exp2SecondList = CodeBuffer::makelist(make_pair(instAddr, SECOND));
+        } else {
+            exp2StartLabel = exp2->expStartLabel;
+            exp2FirstList = exp2->boolTrueList;
+            exp2SecondList = exp2->boolFalseList;
+        }
+
+        // Decide on the integration between backpatch lists of first condiction (AND/OR)
+        switch (op) {
+            case OR:
+                insertToListsFromLists(trueList, exp1FirstList,
+                                       nextExpList, exp1SecondList);
+
+                break;
+            case AND:
+                insertToListsFromLists(nextExpList, exp1FirstList,
+                                       falseList, exp1SecondList);
+                break;
+            default:
+                throw "Unsupported operation to evalBoolExp with nonnull exp2";
+        }
+    }
+
+    // Decide on the integration between backpatch lists of first condiction (AND/OR)
+    switch (op) {
+        case NOT:
+            insertToListsFromLists(falseList, exp1FirstList,
+                                   trueList, exp1SecondList);
+
+            break;
+        case AND:
+        case OR:
+            codeBuffer.bpatch(nextExpList, exp2StartLabel);
+
+            insertToListsFromLists(trueList, exp2FirstList,
+                                   falseList, exp2SecondList);
+            break;
+        default:
+            throw "Unsupported operation to evalBoolExp";
+    }
+    resultExp = NEW(ExpC, ("BOOL", ""));
+    resultExp->boolFalseList = falseList;
+    resultExp->boolTrueList = trueList;
+    resultExp->expStartLabel = exp1StartLabel;
+    return resultExp;
 }
 
 const string &ExpC::getType() const { return type; }

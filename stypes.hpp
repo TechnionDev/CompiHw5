@@ -54,6 +54,10 @@ class ExpC : public STypeC {
     string type;
     string registerOrImmediate;
 
+    AddressList boolFalseList;
+    AddressList boolTrueList;
+    string expStartLabel;
+
    public:
     ExpC(const string &type, const string &reg);
     const string &getType() const;
@@ -63,6 +67,8 @@ class ExpC : public STypeC {
     bool isByte() const;
     // Get result of bin operation on two expressions
     static shared_ptr<ExpC> getBinOpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op);
+    // Short-Circuit eval bool value
+    static shared_ptr<ExpC> evalBool(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op);
 };
 
 class IdC : public STypeC {
