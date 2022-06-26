@@ -3,8 +3,8 @@
 #include <iostream>
 #include <string>
 #include "hw3_output.hpp"
-// #include "tokens.hpp"
 #include "stypes.hpp"
+#include "bp.hpp"
 
 #define GET_SYM(x) symbolTable.getVarSymbol(STYPE2STD(string, x))
 #define GET_SYMTYPE(x) symbolTable.getVarSymbol(STYPE2STD(string, x))->getType()
@@ -54,7 +54,6 @@ SymbolTable symbolTable;
 %left AND
 %left EQOP NEOP
 %left GEOP GTOP LEOP LTOP
-%left RELOP
 %left ADDOP SUBOP
 %left MULOP DIVOP
 %right NOT
@@ -90,14 +89,20 @@ FuncDecl:       RetType ID LPAREN Formals           {
                                                     }
                     RPAREN LBRACE Statements RBRACE {
                                                         symbolTable.removeScope();
+                                                        string retTypeLlvm = typeNameToLlvmType(symbolTable.retType);
+                                                        string defaultRetVal = retTypeLlvm + (retTypeLlvm == "void" ? "" : " 0");
                                                         symbolTable.retType = nullptr;
+                                                        auto &codeBuffer = CodeBuffer::getInstance();
+                                                        codeBuffer.emit("ret" + defaultRetVal);
+                                                        // To balance rainbow brackets {
+                                                        codeBuffer.emit("}");
                                                     }
 ;
-RetType:        Type                                {$$ = $1;}
-                | VOID                              {$$ = NEW(RetTypeNameC, ("VOID"));}
+RetType:        Type                                { $$ = $1; }
+                | VOID                              { $$ = NEW(RetTypeNameC, ("VOID")); }
                 ;
-Formals:        /* Epsilon */%empty                 {$$ = NEWSTD(vector<shared_ptr<IdC> >);}
-                | FormalsList                       {$$ = $1;}
+Formals:        /* Epsilon */%empty                 { $$ = NEWSTD(vector<shared_ptr<IdC> >); }
+                | FormalsList                       { $$ = $1; }
 ;
 FormalsList:    FormalDecl                          {
                                                         auto vec = vector<shared_ptr<IdC> >();
@@ -109,7 +114,7 @@ FormalsList:    FormalDecl                          {
                                                         $$ = $3;
                                                     }
                 ;
-FormalDecl:     TypeDecl                            {$$ = $1;}
+FormalDecl:     TypeDecl                            { $$ = $1; }
                 ;
 Statements:     Statement                           {}
                 | Statements Statement              {}
@@ -165,74 +170,45 @@ Statement:      LBRACE OpenScope Statements RBRACE CloseScope
                 ;
 TypeDecl:       Type ID                             { $$ = NEW(IdC, (STYPE2STD(string, $2), DC(VarTypeNameC, $1)->getTypeName())); }
                 ;
-Call:           ID LPAREN ExpList RPAREN            {
-                                                        auto funcId = GET_FUNC($1);
-
-                                                        if (funcId->getArgTypes().size() != STYPE2STD(vector<string>, $3).size()) {
-                                                            errorPrototypeMismatch(yylineno, funcId->getName(), funcId->getArgTypes());
-                                                        } else {
-                                                            for (int i = 0; i < STYPE2STD(vector<string>, $3).size(); i++) {
-                                                                if (not areStrTypesCompatible(funcId->getArgTypes()[i], STYPE2STD(vector<string>, $3)[i])) {
-                                                                    errorPrototypeMismatch(yylineno, funcId->getName(), funcId->getArgTypes());
-                                                                }
-                                                            }
-
-                                                            $$ = NEW(RetTypeNameC, (funcId->getType()));
-                                                        }
-                                                    }
-                | ID LPAREN RPAREN                  {
-                                                        auto funcId = GET_FUNC($1);
-                                                        if (funcId->getArgTypes().size() != 0) {
-                                                            errorPrototypeMismatch(yylineno, funcId->getName(), funcId->getArgTypes());
-                                                        } else {
-                                                            $$ = NEW(RetTypeNameC, (funcId->getType()));
-                                                        }
-                                                    }
+Call:           ID LPAREN ExpList RPAREN            { $$ = ExpC::getCallResult(GET_FUNC($1), $3); }
+                | ID LPAREN RPAREN                  { $$ = ExpC::getCallResult(GET_FUNC($1), NEWSTD(vector<shared_ptr<ExpC> >)); }
                 ;
 ExpList:        Exp                                 {
-                                                        $$ = NEWSTD(vector<string>);
-                                                        VECS($$).push_back(DC(ExpC, $1)->getType());
+                                                        $$ = NEWSTD(vector<shared_ptr<ExpC> >);
+                                                        STYPE2STD(vector<shared_ptr<ExpC> >, $$).push_back(DC(ExpC, $1));
                                                     }
                 | Exp COMMA ExpList                 {
-                                                        VECS($3).push_back(DC(ExpC, $1)->getType());
+                                                        STYPE2STD(vector<shared_ptr<ExpC> >, $3).push_back(DC(ExpC, $1));
                                                         $$ = $3;
                                                     }
                 ;
-Type:           INT                                 {$$ = NEW(VarTypeNameC, ("INT"));}
-                | BYTE                              {$$ = NEW(VarTypeNameC, ("BYTE"));}
-                | BOOL                              {$$ = NEW(VarTypeNameC, ("BOOL"));}
+Type:           INT                                 { $$ = NEW(VarTypeNameC, ("INT")); }
+                | BYTE                              { $$ = NEW(VarTypeNameC, ("BYTE")); }
+                | BOOL                              { $$ = NEW(VarTypeNameC, ("BOOL")); }
                 ;
-BoolExp: Exp                                        {verifyBoolType($1); $$ = $1;}
-Exp:            LPAREN Exp RPAREN                   {$$ = $2;}
-                | Exp ADDOP Exp                    { $$ = ExpC::getBinOpResult($1, $3, $2); }
-                | Exp SUBOP Exp                    { $$ = ExpC::getBinOpResult($1, $3, $2); }
-                | Exp MULOP Exp                    { $$ = ExpC::getBinOpResult($1, $3, $2); }
-                | Exp DIVOP Exp                    { $$ = ExpC::getBinOpResult($1, $3, $2); }
-                | ID                                {$$ = NEW(ExpC,(GET_SYMTYPE($1)));} // TODO: Implement
-                | Call                              {$$ = NEW(ExpC,(DC(RetTypeNameC, $1)->getTypeName()));} // TODO: Implement
-                | NUM                               {$$ = NEW(ExpC,("INT", STYPE2STD(string, $1)));}
-                | NUM B                             {$$ = NEW(ExpC,("BYTE", STYPE2STD(string, $1)));}
-                | STRING                            {$$ = NEW(ExpC,("STRING", STYPE2STD(string, $1)));}
-                | TRUE                              {$$ = NEW(ExpC,("BOOL", "1"));}
-                | FALSE                             {$$ = NEW(ExpC,("BOOL", "0"));}
-                | NOT Exp                           {$$ = ExpC::evalBool($2, nullptr, NOT);}
-                | Exp AND Exp                       {$$ = ExpC::evalBool($1, $3, AND);}
-                | Exp OR Exp                        {$$ = ExpC::evalBool($1, $3, OR);}
-                | Exp GEOP Exp                      {$$ = ExpC::getCmpResult($1, $3, GEOP);}
-                | Exp GTOP Exp                      {$$ = ExpC::getCmpResult($1, $3, GTOP);}
-                | Exp LEOP Exp                      {$$ = ExpC::getCmpResult($1, $3, LEOP);}
-                | Exp LTOP Exp                      {$$ = ExpC::getCmpResult($1, $3, LTOP);}
-                | Exp EQOP Exp                      {$$ = ExpC::getCmpResult($1, $3, EQOP);}
-                | Exp NEOP Exp                      {$$ = ExpC::getCmpResult($1, $3, NEOP);}
-                | LPAREN Type RPAREN Exp            { 
-                                                        auto castDstType = DC(VarTypeNameC, $2)->getTypeName();
-                                                        auto castSrcType = DC(ExpC, $4)->getType();
-                                                        if (not areStrTypesCompatible(castDstType, castSrcType) 
-                                                            and not areStrTypesCompatible(castSrcType, castDstType)) {
-                                                                errorMismatch(yylineno);
-                                                        }
-                                                        $$ = NEW(ExpC, (castDstType));
-                                                    }
+BoolExp: Exp                                        { verifyBoolType($1); $$ = $1; }
+Exp:            LPAREN Exp RPAREN                   { $$ = $2; }
+                | Exp ADDOP Exp                     { $$ = ExpC::getBinOpResult($1, $3, $2); }
+                | Exp SUBOP Exp                     { $$ = ExpC::getBinOpResult($1, $3, $2); }
+                | Exp MULOP Exp                     { $$ = ExpC::getBinOpResult($1, $3, $2); }
+                | Exp DIVOP Exp                     { $$ = ExpC::getBinOpResult($1, $3, $2); }
+                | ID                                { $$ = ExpC::loadIdValue(GET_SYM($1)); } // TODO: Implement
+                | Call                              { $$ = $1 != nullptr ? $1: throw "Can't derive Call from Exp for void functions"; } // TODO: Implement
+                | NUM                               { $$ = NEW(ExpC,("INT", STYPE2STD(string, $1))); }
+                | NUM B                             { $$ = NEW(ExpC,("BYTE", STYPE2STD(string, $1))); }
+                | STRING                            { $$ = NEW(ExpC,("STRING", STYPE2STD(string, $1))); } // TODO: Implement
+                | TRUE                              { $$ = NEW(ExpC,("BOOL", "1")); }
+                | FALSE                             { $$ = NEW(ExpC,("BOOL", "0")); }
+                | NOT Exp                           { $$ = ExpC::evalBool($2, nullptr, NOT); }
+                | Exp AND Exp                       { $$ = ExpC::evalBool($1, $3, AND); }
+                | Exp OR Exp                        { $$ = ExpC::evalBool($1, $3, OR); }
+                | Exp GEOP Exp                      { $$ = ExpC::getCmpResult($1, $3, GEOP); }
+                | Exp GTOP Exp                      { $$ = ExpC::getCmpResult($1, $3, GTOP); }
+                | Exp LEOP Exp                      { $$ = ExpC::getCmpResult($1, $3, LEOP); }
+                | Exp LTOP Exp                      { $$ = ExpC::getCmpResult($1, $3, LTOP); }
+                | Exp EQOP Exp                      { $$ = ExpC::getCmpResult($1, $3, EQOP); }
+                | Exp NEOP Exp                      { $$ = ExpC::getCmpResult($1, $3, NEOP); }
+                | LPAREN Type RPAREN Exp            { $$ = NEW(ExpC, ($2, $4)); }
                 ;
 %%
 

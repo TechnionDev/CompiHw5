@@ -13,3 +13,7 @@ Ralloc &Ralloc::instance() {
 string Ralloc::getNextReg() {
     return "%" + (nextReg++);
 }
+
+string Ralloc::getNextVarName() {
+    return "@." + (nextReg++);
+}

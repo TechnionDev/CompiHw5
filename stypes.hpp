@@ -22,6 +22,9 @@ typedef enum {
     STRetType
 } SymbolType;
 
+typedef int Offset;
+typedef shared_ptr<STypeC> STypePtr;
+
 const string &verifyAllTypeNames(const string &type);
 const string &verifyValTypeName(const string &type);
 const string &verifyRetTypeName(const string &type);
@@ -34,8 +37,6 @@ class STypeC {
     STypeC(SymbolType symType);
     virtual ~STypeC() = default;
 };
-
-typedef shared_ptr<STypeC> STypePtr;
 
 class RetTypeNameC : public STypeC {
     string type;
@@ -54,6 +55,7 @@ class ExpC : public STypeC {
     string type;
     string registerOrImmediate;
 
+    // Used only by bool expressions
     AddressList boolFalseList;
     AddressList boolTrueList;
     string expStartLabel;
@@ -73,6 +75,12 @@ class ExpC : public STypeC {
     static shared_ptr<ExpC> getCmpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op);
     // Get shared_ptr<ExpC> by casting exp from srcType to dstType
     static shared_ptr<ExpC> getCastResult(shared_ptr<STypeC> dstStype, shared_ptr<STypeC> expStype);
+    // Get shared_ptr<ExpC> from a function call
+    static shared_ptr<ExpC> getCallResult(shared_ptr<FuncIdC> funcIdStype, shared_ptr<STypeC> argsStype);
+    // Get shared_ptr<ExpC> from variable ID
+    static shared_ptr<ExpC> loadIdValue(shared_ptr<IdC> idSymbol);
+    // Get shared_ptr<ExpC> from string literal
+    static shared_ptr<ExpC> loadStringLiteralAddr(string literal);
 };
 
 class IdC : public STypeC {
@@ -80,9 +88,13 @@ class IdC : public STypeC {
     string type;
 
    public:
+    Offset offset;
+
     IdC(const string &varName, const string &type);
     const string &getName() const;
     virtual const string &getType() const;
+    void setOffset(Offset offset);
+    Offset getOffset() const;
 };
 
 class FuncIdC : public IdC {
@@ -121,6 +133,7 @@ class StdType : public STypeC {
 bool isImpliedCastAllowed(shared_ptr<STypeC> rawExp1, shared_ptr<STypeC> rawExp2);
 bool areStrTypesCompatible(const string &typeStr1, const string &typeStr2);
 void verifyBoolType(shared_ptr<STypeC> exp);
+string typeNameToLlvmType(const string &typeName);
 
 #define YYSTYPE STypePtr
 #define NEW(x, y) (std::shared_ptr<x>(new x y))

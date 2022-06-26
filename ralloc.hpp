@@ -16,6 +16,8 @@ class Ralloc {
     static Ralloc &instance();
     // Get the next available register
     std::string getNextReg();
+    // Get the next available variable name
+    std::string getNextVarName();
 };
 
 #endif
