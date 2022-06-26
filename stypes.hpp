@@ -71,6 +71,8 @@ class ExpC : public STypeC {
     static shared_ptr<ExpC> evalBool(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op);
     // Get shared_ptr<ExpC> from the result of comparing exp1 and exp2
     static shared_ptr<ExpC> getCmpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op);
+    // Get shared_ptr<ExpC> by casting exp from srcType to dstType
+    static shared_ptr<ExpC> getCastResult(shared_ptr<STypeC> dstStype, shared_ptr<STypeC> expStype);
 };
 
 class IdC : public STypeC {
