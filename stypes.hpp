@@ -86,6 +86,7 @@ class ExpC : public STypeC {
 class IdC : public STypeC {
     string name;
     string type;
+    string registerName;
 
    public:
     Offset offset;
@@ -95,6 +96,8 @@ class IdC : public STypeC {
     virtual const string &getType() const;
     void setOffset(Offset offset);
     Offset getOffset() const;
+    const string &getRegisterName() const;
+    void setRegisterName(string registerName);
 };
 
 class FuncIdC : public IdC {

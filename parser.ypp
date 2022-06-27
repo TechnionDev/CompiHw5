@@ -186,7 +186,7 @@ Type:           INT                                 { $$ = NEW(VarTypeNameC, ("I
                 | BYTE                              { $$ = NEW(VarTypeNameC, ("BYTE")); }
                 | BOOL                              { $$ = NEW(VarTypeNameC, ("BOOL")); }
                 ;
-BoolExp: Exp                                        { verifyBoolType($1); $$ = $1; }
+BoolExp:        Exp                                 { verifyBoolType($1); $$ = $1; }
 Exp:            LPAREN Exp RPAREN                   { $$ = $2; }
                 | Exp ADDOP Exp                     { $$ = ExpC::getBinOpResult($1, $3, $2); }
                 | Exp SUBOP Exp                     { $$ = ExpC::getBinOpResult($1, $3, $2); }
