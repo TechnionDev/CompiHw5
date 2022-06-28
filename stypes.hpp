@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include "bp.hpp"
+
 using std::map;
 using std::shared_ptr;
 using std::string;
@@ -23,7 +25,6 @@ typedef enum {
 } SymbolType;
 
 typedef int Offset;
-typedef shared_ptr<STypeC> STypePtr;
 
 const string &verifyAllTypeNames(const string &type);
 const string &verifyValTypeName(const string &type);
@@ -38,6 +39,8 @@ class STypeC {
     virtual ~STypeC() = default;
 };
 
+typedef shared_ptr<STypeC> STypePtr;
+
 class RetTypeNameC : public STypeC {
     string type;
 
@@ -49,38 +52,6 @@ class RetTypeNameC : public STypeC {
 class VarTypeNameC : public RetTypeNameC {
    public:
     VarTypeNameC(const string &type);
-};
-
-class ExpC : public STypeC {
-    string type;
-    string registerOrImmediate;
-
-    // Used only by bool expressions
-    AddressList boolFalseList;
-    AddressList boolTrueList;
-    string expStartLabel;
-
-   public:
-    ExpC(const string &type, const string &reg);
-    const string &getType() const;
-    bool isInt() const;
-    bool isBool() const;
-    bool isString() const;
-    bool isByte() const;
-    // Get result of bin operation on two expressions
-    static shared_ptr<ExpC> getBinOpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op);
-    // Short-Circuit eval bool value
-    static shared_ptr<ExpC> evalBool(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op);
-    // Get shared_ptr<ExpC> from the result of comparing exp1 and exp2
-    static shared_ptr<ExpC> getCmpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op);
-    // Get shared_ptr<ExpC> by casting exp from srcType to dstType
-    static shared_ptr<ExpC> getCastResult(shared_ptr<STypeC> dstStype, shared_ptr<STypeC> expStype);
-    // Get shared_ptr<ExpC> from a function call
-    static shared_ptr<ExpC> getCallResult(shared_ptr<FuncIdC> funcIdStype, shared_ptr<STypeC> argsStype);
-    // Get shared_ptr<ExpC> from variable ID
-    static shared_ptr<ExpC> loadIdValue(shared_ptr<IdC> idSymbol);
-    // Get shared_ptr<ExpC> from string literal
-    static shared_ptr<ExpC> loadStringLiteralAddr(string literal);
 };
 
 class IdC : public STypeC {
@@ -107,8 +78,42 @@ class FuncIdC : public IdC {
     vector<string> &getArgTypes();
     const string &getType() const;
     // Create FuncIdC with opening a scope
-    static shared_ptr<FuncIdC> startFuncIdWithScope(const string &name, const string &type, const vector<shared_ptr<IdC>> &formals);
+    static shared_ptr<FuncIdC> startFuncIdWithScope(const string &name, shared_ptr<RetTypeNameC> type, const vector<shared_ptr<IdC>> &formals);
     static void endFuncIdScope();
+};
+
+class ExpC : public STypeC {
+    string type;
+    string registerOrImmediate;
+
+    // Used only by bool expressions
+    AddressList boolFalseList;
+    AddressList boolTrueList;
+    string expStartLabel;
+
+    string assureAndGetRegResultOfExpression();
+
+   public:
+    ExpC(const string &type, const string &reg);
+    const string &getType() const;
+    bool isInt() const;
+    bool isBool() const;
+    bool isString() const;
+    bool isByte() const;
+    // Get result of bin operation on two expressions
+    static shared_ptr<ExpC> getBinOpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op);
+    // Short-Circuit eval bool value
+    static shared_ptr<ExpC> evalBool(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op);
+    // Get shared_ptr<ExpC> from the result of comparing exp1 and exp2
+    static shared_ptr<ExpC> getCmpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op);
+    // Get shared_ptr<ExpC> by casting exp from srcType to dstType
+    static shared_ptr<ExpC> getCastResult(shared_ptr<STypeC> dstStype, shared_ptr<STypeC> expStype);
+    // Get shared_ptr<ExpC> from a function call
+    static shared_ptr<ExpC> getCallResult(shared_ptr<FuncIdC> funcIdStype, shared_ptr<STypeC> argsStype);
+    // Get shared_ptr<ExpC> from variable ID
+    static shared_ptr<ExpC> loadIdValue(shared_ptr<IdC> idSymbol);
+    // Get shared_ptr<ExpC> from string literal
+    static shared_ptr<ExpC> loadStringLiteralAddr(string literal);
 };
 
 class CallC : public STypeC {

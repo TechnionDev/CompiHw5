@@ -1,4 +1,5 @@
 #include "symbolTable.hpp"
+
 #include "hw3_output.hpp"
 #include "parser.tab.hpp"
 
@@ -10,8 +11,8 @@ SymbolTable::SymbolTable() {
     this->nestedLoopDepth = 0;
     this->currOffset = 0;
     this->addScope();
-    NEW(FuncIdC, ("print", "VOID", vector<string>({"STRING"})));
-    NEW(FuncIdC, ("printi", "VOID", vector<string>({"INT"})));
+    this->addSymbol(NEW(FuncIdC, ("print", "VOID", vector<shared_ptr<IdC>>({NEW(IdC, ("msg", "STRING"))}))));
+    this->addSymbol(NEW(FuncIdC, ("printi", "VOID", vector<shared_ptr<IdC>>({NEW(IdC, ("i", "INT"))}))));
 }
 
 SymbolTable::~SymbolTable() {}
@@ -79,7 +80,8 @@ void SymbolTable::addFormal(shared_ptr<IdC> type) {
     this->symTbl[type->getName()] = type;
 }
 
-void SymbolTable::addSymbol(const string &name, shared_ptr<IdC> type) {
+void SymbolTable::addSymbol(shared_ptr<IdC> type) {
+    const string &name = type->getName();
     // Check that the symbol doesn't exist in the scope yet
     if (type == nullptr) {
         throw "Can't add a nullptr symbol to the symbol table";
