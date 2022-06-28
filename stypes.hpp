@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include "bp.hpp"
+
 using std::map;
 using std::shared_ptr;
 using std::string;
@@ -23,7 +25,6 @@ typedef enum {
 } SymbolType;
 
 typedef int Offset;
-typedef shared_ptr<STypeC> STypePtr;
 
 const string &verifyAllTypeNames(const string &type);
 const string &verifyValTypeName(const string &type);
@@ -38,6 +39,8 @@ class STypeC {
     virtual ~STypeC() = default;
 };
 
+typedef shared_ptr<STypeC> STypePtr;
+
 class RetTypeNameC : public STypeC {
     string type;
 
@@ -51,6 +54,34 @@ class VarTypeNameC : public RetTypeNameC {
     VarTypeNameC(const string &type);
 };
 
+class IdC : public STypeC {
+    string name;
+    string type;
+
+   public:
+    Offset offset;
+
+    IdC(const string &varName, const string &type);
+    const string &getName() const;
+    virtual const string &getType() const;
+    void setOffset(Offset offset);
+    Offset getOffset() const;
+};
+
+class FuncIdC : public IdC {
+    vector<string> argTypes;
+    string retType;
+
+   public:
+    FuncIdC(const string &name, const string &type, const vector<shared_ptr<IdC>> &formals);
+    const vector<string> &getArgTypes() const;
+    vector<string> &getArgTypes();
+    const string &getType() const;
+    // Create FuncIdC with opening a scope
+    static shared_ptr<FuncIdC> startFuncIdWithScope(const string &name, shared_ptr<RetTypeNameC> type, const vector<shared_ptr<IdC>> &formals);
+    static void endFuncIdScope();
+};
+
 class ExpC : public STypeC {
     string type;
     string registerOrImmediate;
@@ -59,6 +90,8 @@ class ExpC : public STypeC {
     AddressList boolFalseList;
     AddressList boolTrueList;
     string expStartLabel;
+
+    string assureAndGetRegResultOfExpression();
 
    public:
     ExpC(const string &type, const string &reg);
@@ -81,34 +114,6 @@ class ExpC : public STypeC {
     static shared_ptr<ExpC> loadIdValue(shared_ptr<IdC> idSymbol);
     // Get shared_ptr<ExpC> from string literal
     static shared_ptr<ExpC> loadStringLiteralAddr(string literal);
-};
-
-class IdC : public STypeC {
-    string name;
-    string type;
-    string registerName;
-
-   public:
-    Offset offset;
-
-    IdC(const string &varName, const string &type);
-    const string &getName() const;
-    virtual const string &getType() const;
-    void setOffset(Offset offset);
-    Offset getOffset() const;
-    const string &getRegisterName() const;
-    void setRegisterName(string registerName);
-};
-
-class FuncIdC : public IdC {
-    vector<string> argTypes;
-    string retType;
-
-   public:
-    FuncIdC(const string &name, const string &type, const vector<string> &argTypes);
-    const vector<string> &getArgTypes() const;
-    vector<string> &getArgTypes();
-    const string &getType() const;
 };
 
 class CallC : public STypeC {
@@ -140,9 +145,9 @@ string typeNameToLlvmType(const string &typeName);
 
 #define YYSTYPE STypePtr
 #define NEW(x, y) (std::shared_ptr<x>(new x y))
-#define NEWSTD(x) (std::shared_ptr<StdType<x> >(new StdType<x>(x())))
-#define NEWSTD_V(x, y) (std::shared_ptr<StdType<x> >(new StdType<x>(x y)))
-#define STYPE2STD(t, x) (dynamic_pointer_cast<StdType<t> >(x)->getValue())
+#define NEWSTD(x) (std::shared_ptr<StdType<x>>(new StdType<x>(x())))
+#define NEWSTD_V(x, y) (std::shared_ptr<StdType<x>>(new StdType<x>(x y)))
+#define STYPE2STD(t, x) (dynamic_pointer_cast<StdType<t>>(x)->getValue())
 #define DC(t, x) (dynamic_pointer_cast<t>(x))
 #define VECS(x) STYPE2STD(vector<string>, x)
 

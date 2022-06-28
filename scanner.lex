@@ -52,9 +52,9 @@ escapechars     ([\\"nrt0])
 (\})                                return RBRACE;
 (=)                                 return ASSIGN;
 (\>=)                               return GEOP;
-(\>)                                return GOP;
+(\>)                                return GTOP;
 (\<=)                               return LEOP;
-(\<)                                return LOP;
+(\<)                                return LTOP;
 ((==))                              return EQOP;
 ((!=))                              return NEOP;
 (\+)                                return ADDOP;

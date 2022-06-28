@@ -4,8 +4,11 @@
 #include "hw3_output.hpp"
 #include "parser.tab.hpp"
 #include "ralloc.hpp"
+#include "symbolTable.hpp"
 
 using namespace output;
+
+extern SymbolTable symbolTable;
 
 STypeC::STypeC(SymbolType symType) : symType(symType) {}
 
@@ -76,6 +79,41 @@ bool ExpC::isByte() const {
     return this->type == "BYTE";
 }
 
+/* Assures that the expression has a register with the result.
+ *   To assure even short-circuit bool expressions (that don't have reg) are being assigned with result reg properly.
+ */
+string ExpC::assureAndGetRegResultOfExpression() {
+    if (this->registerOrImmediate != "") {
+        return this->registerOrImmediate;
+    }
+    if (not this->isBool()) {
+        throw "ExpC without register must be bool";
+    }
+    auto &ralloc = Ralloc::instance();
+    auto &buffer = CodeBuffer::instance();
+
+    // Create a new register for the result
+    string trueReg = ralloc.getNextReg();
+    string falseReg = ralloc.getNextReg();
+    string resultReg = ralloc.getNextReg();
+    AddressList resLabelsList;
+
+    // Backpatch true and false lists
+    string trueLabel = buffer.genLabel();
+    resLabelsList.push_back(make_pair(buffer.emit("br label @"), FIRST));
+
+    string falseLabel = buffer.genLabel();
+    resLabelsList.push_back(make_pair(buffer.emit("br label @"), FIRST));
+    buffer.bpatch(this->boolTrueList, trueLabel);
+    buffer.bpatch(this->boolFalseList, falseLabel);
+    // Use phi to merge true and false registers
+    string phiLabel = buffer.genLabel();
+    buffer.emit(resultReg + " = phi i1 [true, " + trueLabel + "], [false, " + falseLabel + "]");
+    buffer.bpatch(resLabelsList, phiLabel);
+    this->registerOrImmediate = resultReg;
+    return resultReg;
+}
+
 shared_ptr<ExpC> ExpC::getBinOpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op) {
     shared_ptr<ExpC> exp1 = DC(ExpC, stype1);
     shared_ptr<ExpC> exp2 = DC(ExpC, stype2);
@@ -133,7 +171,7 @@ void insertToListsFromLists(AddressList &aListFrom, AddressList &aListTo,
     bListTo.insert(bListTo.end(), bListFrom.begin(), bListFrom.end());
 }
 
-shared_ptr<ExpC> ExpC::evalBoolExp(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op) {
+shared_ptr<ExpC> ExpC::evalBool(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op) {
     shared_ptr<ExpC> exp1 = DC(ExpC, stype1);
     shared_ptr<ExpC> exp2 = DC(ExpC, stype2);
     shared_ptr<ExpC> resultExp;
@@ -142,7 +180,7 @@ shared_ptr<ExpC> ExpC::evalBoolExp(shared_ptr<STypeC> stype1, shared_ptr<STypeC>
 
     // exp2 == null  <==>  op == NOT
     if (not exp1 or (op == NOT) != (exp2 == nullptr)) {
-        throw "evalBoolExp must get _Nonnull as first param and the second is _Nullable iff op == NOT";
+        throw "evalBool must get _Nonnull as first param and the second is _Nullable iff op == NOT";
     }
 
     if (not exp1->isBool() or not exp2->isBool()) {
@@ -163,7 +201,7 @@ shared_ptr<ExpC> ExpC::evalBoolExp(shared_ptr<STypeC> stype1, shared_ptr<STypeC>
     AddressList exp2SecondList;
 
     // Emit the llvm ir code
-    if (exp1->registerOrImmediate[0] != "") {
+    if (exp1->registerOrImmediate != "") {
         exp1StartLabel = codeBuffer.genLabel();
         instAddr = codeBuffer.emit("br i1 " + exp1->registerOrImmediate + ", label @, label @");
         exp1FirstList = CodeBuffer::makelist(make_pair(instAddr, FIRST));
@@ -175,7 +213,7 @@ shared_ptr<ExpC> ExpC::evalBoolExp(shared_ptr<STypeC> stype1, shared_ptr<STypeC>
     }
 
     if (exp2) {
-        if (exp2->registerOrImmediate[0] != "") {
+        if (exp2->registerOrImmediate != "") {
             exp2StartLabel = codeBuffer.genLabel();
             instAddr = codeBuffer.emit("br i1 " + exp2->registerOrImmediate + ", label @, label @");
             exp2FirstList = CodeBuffer::makelist(make_pair(instAddr, FIRST));
@@ -198,7 +236,7 @@ shared_ptr<ExpC> ExpC::evalBoolExp(shared_ptr<STypeC> stype1, shared_ptr<STypeC>
                                        falseList, exp1SecondList);
                 break;
             default:
-                throw "Unsupported operation to evalBoolExp with nonnull exp2";
+                throw "Unsupported operation to evalBool with nonnull exp2";
         }
     }
 
@@ -217,7 +255,7 @@ shared_ptr<ExpC> ExpC::evalBoolExp(shared_ptr<STypeC> stype1, shared_ptr<STypeC>
                                    falseList, exp2SecondList);
             break;
         default:
-            throw "Unsupported operation to evalBoolExp";
+            throw "Unsupported operation to evalBool";
     }
     resultExp = NEW(ExpC, ("BOOL", ""));
     resultExp->boolFalseList = falseList;
@@ -308,19 +346,21 @@ shared_ptr<ExpC> ExpC::getCastResult(shared_ptr<STypeC> dstStype, shared_ptr<STy
         return nullptr;
     }
 
+    // Make sure there's a result register or immediate that holds the result of the expression
+    exp->assureAndGetRegResultOfExpression();
+
     Ralloc &ralloc = Ralloc::instance();
     CodeBuffer &codeBuffer = CodeBuffer::instance();
-
     string resultReg = ralloc.getNextReg();
 
-    if (exp1->isInt() and exp2->isByte()) {
-        codeBuffer.emit(resultReg + " = trunc i32 " + exp1RegOrImm + " to i8");
-    } else if (exp1->isByte() and exp2->isInt()) {
-        codeBuffer.emit(resultReg + " = zext i8 " + exp1RegOrImm + " to i32");
+    if (exp->isInt() and dstType->getTypeName() == "BYTE") {
+        codeBuffer.emit(resultReg + " = trunc i32 " + exp->registerOrImmediate + " to i8");
+    } else if (exp->isByte() and dstType->getTypeName() == "INT") {
+        codeBuffer.emit(resultReg + " = zext i8 " + exp->registerOrImmediate + " to i32");
     } else {
-        codeBuffer.emit(resultReg + " = " + exp1RegOrImm);
+        codeBuffer.emit(resultReg + " = add " + typeNameToLlvmType(exp->getType()) + " " + exp->registerOrImmediate + ", 0");
     }
-    return NEW(ExpC, ("INT", resultReg));
+    return NEW(ExpC, (dstType->getTypeName(), resultReg));
 }
 
 shared_ptr<ExpC> ExpC::getCallResult(shared_ptr<FuncIdC> funcId, shared_ptr<STypeC> argsStype) {
@@ -362,8 +402,12 @@ shared_ptr<ExpC> ExpC::getCallResult(shared_ptr<FuncIdC> funcId, shared_ptr<STyp
 }
 
 shared_ptr<ExpC> ExpC::loadIdValue(shared_ptr<IdC> idSymbol) {
-    // TODO: load the value of ID from the register assigned by the Statement -> *ASSIGN* rules
-    return NEW(ExpC, (idSymbol->getType(), idSymbol->getRegisterName()));  // TODO: edit
+    Offset idOffset = idSymbol->getOffset();
+
+    // TODO: load the value of ID from the register assigned by the Statement -> *ASSIGN* rule
+
+    // return NEW(ExpC, (GET_SYMTYPE($1)));  // TODO: edit
+    return nullptr;
 }
 
 shared_ptr<ExpC> ExpC::loadStringLiteralAddr(string literal) {
@@ -371,10 +415,11 @@ shared_ptr<ExpC> ExpC::loadStringLiteralAddr(string literal) {
     auto &codeBuffer = CodeBuffer::instance();
     string strLiteralAutoGeneratedName = ralloc.getNextVarName();
     string resultReg = ralloc.getNextReg();
-    int literalLength = literal.length() + 1; // `+ 1` for '\0'
+    string llvmCode;  // todo: check
+    int literalLength = literal.length() + 1;
 
     codeBuffer.emitGlobal(strLiteralAutoGeneratedName + " = constant [" +
-                          literalLength + " x i8] c\"" + literal + "\\00\"");
+                          std::to_string(literalLength) + " x i8] c\"" + literal + "\\00\"");
 
     codeBuffer.emit(resultReg + " = getelementptr [4 x i8], [4 x i8]* " +
                     strLiteralAutoGeneratedName + ", i32 0, i32 0");
@@ -402,18 +447,10 @@ Offset IdC::getOffset() const {
     return this->offset;
 }
 
-const string &IdC::getRegisterName() const {
-    return this->registerName;
-}
-
-void IdC::setRegisterName(string registerName) {
-    this->registerName = registerName;
-}
-
 CallC::CallC(const string &type, const string &symbol) : STypeC(STCall), type(verifyRetTypeName(type)), symbol(symbol) {}
 
 string typeNameToLlvmType(const string &typeName) {
-    if (this->retType == "VOID") {
+    if (typeName == "VOID") {
         return "void";
     } else if (typeName == "INT") {
         return "i32";
@@ -428,7 +465,18 @@ string typeNameToLlvmType(const string &typeName) {
     }
 }
 
-FuncIdC::FuncIdC(const string &name, const string &type, const vector<string> &argTypes) : IdC(name, "BAD_VIRTUAL_CALL"), argTypes(argTypes), retType(verifyRetTypeName(type))) {
+// Convert vector<shared_ptr<IdC>> to vector<string> of just the types
+static vector<string> getTypesFromIds(const vector<shared_ptr<IdC>> &ids) {
+    vector<string> types;
+
+    for (auto id : ids) {
+        types.push_back(id->getType());
+    }
+
+    return types;
+}
+
+FuncIdC::FuncIdC(const string &name, const string &type, const vector<shared_ptr<IdC>> &formals) : IdC(name, "BAD_VIRTUAL_CALL"), argTypes(getTypesFromIds(formals)), retType(verifyRetTypeName(type)) {
     CodeBuffer &buffer = CodeBuffer::instance();
     Ralloc &ralloc = Ralloc::instance();
     string retTypeStr = typeNameToLlvmType(this->retType);
@@ -450,6 +498,29 @@ FuncIdC::FuncIdC(const string &name, const string &type, const vector<string> &a
     // Allocate space for 50 variables on the stack
     symbolTable.stackVariablesPtrReg = ralloc.getNextReg();
     buffer.emit(symbolTable.stackVariablesPtrReg + " = alloca i32, 50");
+}
+
+shared_ptr<FuncIdC> FuncIdC::startFuncIdWithScope(const string &name, shared_ptr<RetTypeNameC> type, const vector<shared_ptr<IdC>> &formals) {
+    auto funcId = NEW(FuncIdC, (name, type->getTypeName(), formals));
+    symbolTable.addSymbol(funcId);
+
+    symbolTable.addScope(formals.size());
+    for (auto i = 0; i < formals.size(); i++) {
+        symbolTable.addFormal(formals[i]);
+    }
+    symbolTable.retType = type;
+    return funcId;
+}
+
+void FuncIdC::endFuncIdScope() {
+    symbolTable.removeScope();
+    string retTypeLlvm = typeNameToLlvmType(symbolTable.retType->getTypeName());
+    string defaultRetVal = retTypeLlvm + (retTypeLlvm == "void" ? "" : " 0");
+    symbolTable.retType = nullptr;
+    auto &codeBuffer = CodeBuffer::instance();
+    codeBuffer.emit("ret" + defaultRetVal);
+    // To balance rainbow brackets {
+    codeBuffer.emit("}");
 }
 
 const string &FuncIdC::getType() const {

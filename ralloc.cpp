@@ -11,9 +11,9 @@ Ralloc &Ralloc::instance() {
 
 // Get the next register
 string Ralloc::getNextReg() {
-    return "%" + (nextReg++);
+    return "%" + std::to_string(nextReg++);
 }
 
 string Ralloc::getNextVarName() {
-    return "@." + (nextReg++);
+    return "@." + std::to_string(nextReg++);
 }

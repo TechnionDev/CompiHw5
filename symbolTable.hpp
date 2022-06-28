@@ -26,7 +26,7 @@ class SymbolTable {
     ~SymbolTable();
     void addScope(int funcArgCount = 0);
     void removeScope();
-    void addSymbol(const string &name, shared_ptr<IdC> type);
+    void addSymbol(shared_ptr<IdC> type);
     void addFormal(shared_ptr<IdC> type);
     shared_ptr<IdC> getVarSymbol(const string &name);
     shared_ptr<FuncIdC> getFuncSymbol(const string &name, bool shouldError = true);
