@@ -81,10 +81,7 @@ Formals:        /* Epsilon */%empty                 { $$ = NEWSTD(vector<shared_
                 | FormalsList                       { $$ = $1; }
                 ;
 FormalsList:    FormalDecl                          { $$ = NEWSTD_V(vector<shared_ptr<IdC> >, (vector<shared_ptr<IdC> >(DC(IdC, $1)))); }
-                | FormalDecl COMMA FormalsList      {
-                                                        STYPE2STD(vector<shared_ptr<IdC> >, $3).push_back(DC(IdC, $1));
-                                                        $$ = $3;
-                                                    }
+                | FormalDecl COMMA FormalsList      { STYPE2STD(vector<shared_ptr<IdC> >, ($$ = $3)).push_back(DC(IdC, $1)); }
                 ;
 FormalDecl:     TypeDecl                            { $$ = $1; }
                 ;
@@ -94,10 +91,7 @@ Statements:     Statement                           {}
 OpenScope:      /* epsilon */ %empty                {symbolTable.addScope();};
 CloseScope:      /* epsilon */ %empty               {symbolTable.removeScope();};
 Statement:      LBRACE OpenScope Statements RBRACE CloseScope
-                | TypeDecl SC                       {
-                                                        auto symbol = DC(IdC, $1);
-                                                        symbolTable.addSymbol(symbol->getName(), symbol);
-                                                    }
+                | TypeDecl SC                       { symbolTable.addSymbol(symbol->getName(), DC(IdC, $1)); }
                 | TypeDecl ASSIGN Exp SC            {
                                                         auto symbol = DC(IdC, $1);
                                                         symbolTable.addSymbol(symbol->getName(), symbol);
