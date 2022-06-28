@@ -71,44 +71,16 @@ Program:        Funcs                               {}
                 ;
 Funcs:          /* epsilon */ %empty %prec SECOND_PRIOR    {}
                 | FuncDecl Funcs %prec FIRST_PRIOR  {};
-FuncDecl:       RetType ID LPAREN Formals           {
-                                                        auto formals = STYPE2STD(vector<shared_ptr<IdC> >, $4);
-                                                        vector<string> argTypes;
-                                                        for (auto i = 0; i < formals.size(); i++) {
-                                                            argTypes.push_back(formals[i]->getType());
-                                                        }
-
-                                                        shared_ptr<FuncIdC> funcId(NEW(FuncIdC, (STYPE2STD(string, $2), DC(RetTypeNameC, $1)->getTypeName(), argTypes)));
-                                                        symbolTable.addSymbol(STYPE2STD(string, $2), funcId);
-
-                                                        symbolTable.addScope(formals.size());
-                                                        for (auto i = 0; i < formals.size(); i++) {
-                                                            symbolTable.addFormal(formals[i]);
-                                                        }
-                                                        symbolTable.retType = DC(RetTypeNameC, $1);
-                                                    }
-                    RPAREN LBRACE Statements RBRACE {
-                                                        symbolTable.removeScope();
-                                                        string retTypeLlvm = typeNameToLlvmType(symbolTable.retType);
-                                                        string defaultRetVal = retTypeLlvm + (retTypeLlvm == "void" ? "" : " 0");
-                                                        symbolTable.retType = nullptr;
-                                                        auto &codeBuffer = CodeBuffer::getInstance();
-                                                        codeBuffer.emit("ret" + defaultRetVal);
-                                                        // To balance rainbow brackets {
-                                                        codeBuffer.emit("}");
-                                                    }
-;
+FuncDecl:       RetType ID LPAREN Formals           { FuncIdC::startFuncIdWithScope(STYPE2STD(string, $2), DC(RetTypeNameC, $1)->getTypeName(), STYPE2STD(vector<shared_ptr<IdC> >, $4)); }
+                    RPAREN LBRACE Statements RBRACE { FuncIdC::endFuncIdScope(); }
+                ;
 RetType:        Type                                { $$ = $1; }
                 | VOID                              { $$ = NEW(RetTypeNameC, ("VOID")); }
                 ;
 Formals:        /* Epsilon */%empty                 { $$ = NEWSTD(vector<shared_ptr<IdC> >); }
                 | FormalsList                       { $$ = $1; }
-;
-FormalsList:    FormalDecl                          {
-                                                        auto vec = vector<shared_ptr<IdC> >();
-                                                        vec.push_back(DC(IdC, $1));
-                                                        $$ = NEWSTD_V(vector<shared_ptr<IdC> >, (vec));
-                                                    }
+                ;
+FormalsList:    FormalDecl                          { $$ = NEWSTD_V(vector<shared_ptr<IdC> >, (vector<shared_ptr<IdC> >(DC(IdC, $1)))); }
                 | FormalDecl COMMA FormalsList      {
                                                         STYPE2STD(vector<shared_ptr<IdC> >, $3).push_back(DC(IdC, $1));
                                                         $$ = $3;

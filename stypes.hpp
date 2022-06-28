@@ -102,10 +102,13 @@ class FuncIdC : public IdC {
     string retType;
 
    public:
-    FuncIdC(const string &name, const string &type, const vector<string> &argTypes);
+    FuncIdC(const string &name, const string &type, const vector<shared_ptr<IdC>> &formals);
     const vector<string> &getArgTypes() const;
     vector<string> &getArgTypes();
     const string &getType() const;
+    // Create FuncIdC with opening a scope
+    static shared_ptr<FuncIdC> startFuncIdWithScope(const string &name, const string &type, const vector<shared_ptr<IdC>> &formals);
+    static void endFuncIdScope();
 };
 
 class CallC : public STypeC {
@@ -137,9 +140,9 @@ string typeNameToLlvmType(const string &typeName);
 
 #define YYSTYPE STypePtr
 #define NEW(x, y) (std::shared_ptr<x>(new x y))
-#define NEWSTD(x) (std::shared_ptr<StdType<x> >(new StdType<x>(x())))
-#define NEWSTD_V(x, y) (std::shared_ptr<StdType<x> >(new StdType<x>(x y)))
-#define STYPE2STD(t, x) (dynamic_pointer_cast<StdType<t> >(x)->getValue())
+#define NEWSTD(x) (std::shared_ptr<StdType<x>>(new StdType<x>(x())))
+#define NEWSTD_V(x, y) (std::shared_ptr<StdType<x>>(new StdType<x>(x y)))
+#define STYPE2STD(t, x) (dynamic_pointer_cast<StdType<t>>(x)->getValue())
 #define DC(t, x) (dynamic_pointer_cast<t>(x))
 #define VECS(x) STYPE2STD(vector<string>, x)
 

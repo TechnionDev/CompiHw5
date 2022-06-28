@@ -10,8 +10,8 @@ SymbolTable::SymbolTable() {
     this->nestedLoopDepth = 0;
     this->currOffset = 0;
     this->addScope();
-    this->addSymbol("print", NEW(FuncIdC, ("print", "VOID", vector<string>({"STRING"}))));
-    this->addSymbol("printi", NEW(FuncIdC, ("printi", "VOID", vector<string>({"INT"}))));
+    NEW(FuncIdC, ("print", "VOID", vector<string>({"STRING"})));
+    NEW(FuncIdC, ("printi", "VOID", vector<string>({"INT"})));
 }
 
 SymbolTable::~SymbolTable() {}

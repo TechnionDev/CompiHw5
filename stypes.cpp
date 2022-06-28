@@ -424,7 +424,18 @@ string typeNameToLlvmType(const string &typeName) {
     }
 }
 
-FuncIdC::FuncIdC(const string &name, const string &type, const vector<string> &argTypes) : IdC(name, "BAD_VIRTUAL_CALL"), argTypes(argTypes), retType(verifyRetTypeName(type))) {
+// Convert vector<shared_ptr<IdC>> to vector<string> of just the types
+static vector<string> getTypesFromIds(vector<shared_ptr<IdC>> &ids) {
+    vector<string> types;
+
+    for (auto id : ids) {
+        types.push_back(id->getType());
+    }
+
+    return types;
+}
+
+FuncIdC::FuncIdC(const string &name, const string &type, const vector<shared_ptr<IdC> > &formals) : IdC(name, "BAD_VIRTUAL_CALL"), argTypes(getTypesFromIds(formals)), retType(verifyRetTypeName(type))) {
     CodeBuffer &buffer = CodeBuffer::instance();
     Ralloc &ralloc = Ralloc::instance();
     string retTypeStr = typeNameToLlvmType(this->retType);
@@ -446,6 +457,28 @@ FuncIdC::FuncIdC(const string &name, const string &type, const vector<string> &a
     // Allocate space for 50 variables on the stack
     symbolTable.stackVariablesPtrReg = ralloc.getNextReg();
     buffer.emit(symbolTable.stackVariablesPtrReg + " = alloca i32, 50");
+    symbolTable.addSymbol(name, funcId);
+}
+
+shared_ptr<FuncIdC> startFuncIdWithScope(const string &name, const string &type, const vector<shared_ptr<IdC>> &formals) {
+    auto funcId = NEW(FuncIdC, (name, type, formals));
+
+    symbolTable.addScope(formals.size());
+    for (auto i = 0; i < formals.size(); i++) {
+        symbolTable.addFormal(formals[i]);
+    }
+    symbolTable.retType = type;
+}
+
+void FuncIdC::endFuncIdScope() {
+    symbolTable.removeScope();
+    string retTypeLlvm = typeNameToLlvmType(symbolTable.retType);
+    string defaultRetVal = retTypeLlvm + (retTypeLlvm == "void" ? "" : " 0");
+    symbolTable.retType = nullptr;
+    auto &codeBuffer = CodeBuffer::getInstance();
+    codeBuffer.emit("ret" + defaultRetVal);
+    // To balance rainbow brackets {
+    codeBuffer.emit("}");
 }
 
 const string &FuncIdC::getType() const {
