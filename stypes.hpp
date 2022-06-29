@@ -103,6 +103,7 @@ class ExpC : public STypeC {
     bool isBool() const;
     bool isString() const;
     bool isByte() const;
+    string getExpStartLabel() const;
     // Get result of bin operation on two expressions
     static shared_ptr<ExpC> getBinOpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op);
     // Short-Circuit eval bool value
@@ -145,6 +146,10 @@ bool isImpliedCastAllowed(shared_ptr<STypeC> rawExp1, shared_ptr<STypeC> rawExp2
 bool areStrTypesCompatible(const string &typeStr1, const string &typeStr2);
 void verifyBoolType(shared_ptr<STypeC> exp);
 string typeNameToLlvmType(const string &typeName);
+shared_ptr<STypeC> handleIfStart(shared_ptr<STypeC> conditionStype);
+shared_ptr<STypeC> handleIfEnd(shared_ptr<STypeC> conditionStype, bool hasElse = false);
+void handleElseEnd(shared_ptr<STypeC> endIfListStype);
+void handleWhileEnd(shared_ptr<STypeC> endIfListStype);
 
 #define YYSTYPE STypePtr
 #define NEW(x, y) (std::shared_ptr<x>(new x y))

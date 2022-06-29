@@ -12,46 +12,6 @@ extern SymbolTable symbolTable;
 
 STypeC::STypeC(SymbolType symType) : symType(symType) {}
 
-const string &verifyAllTypeNames(const string &type) {
-    if (type == "INT" or type == "BOOL" or type == "BYTE" or type == "VOID" or type == "STRING" or type == "BAD_VIRTUAL_CALL") {
-        return type;
-    } else {
-        errorMismatch(yylineno);
-    }
-    // Never reaches here because errorMismatch exits
-    return type;
-}
-
-const string &verifyValTypeName(const string &type) {
-    if (verifyAllTypeNames(type) != "VOID") {
-        return type;
-    } else {
-        errorMismatch(yylineno);
-    }
-    // Never reaches here because errorMismatch exits
-    return type;
-}
-
-const string &verifyRetTypeName(const string &type) {
-    if (verifyAllTypeNames(type) != "STRING") {
-        return type;
-    } else {
-        errorMismatch(yylineno);
-    }
-    // Never reaches here because errorMismatch exits
-    return type;
-}
-
-const string &verifyVarTypeName(const string &type) {
-    if (verifyAllTypeNames(type) != "VOID") {
-        return type;
-    } else {
-        errorMismatch(yylineno);
-    }
-    // Never reaches here because errorMismatch exits
-    return type;
-}
-
 RetTypeNameC::RetTypeNameC(const string &type) : STypeC(STRetType), type(verifyRetTypeName(type)) {}
 
 VarTypeNameC::VarTypeNameC(const string &type) : RetTypeNameC(verifyVarTypeName(type)) {}
@@ -60,6 +20,11 @@ ExpC::ExpC(const string &type, const string &regOrImmStr) : STypeC(STExpression)
     // TODO: Handle strings
     if (regOrImmStr[0] != '%' and (type == "INT" or type == "BYTE") and stoi(regOrImmStr) > 255) {
         errorByteTooLarge(yylineno, regOrImmStr);
+    }
+    if (type == "BOOL") {
+        // Gen start label
+        auto &buffer = CodeBuffer::instance();
+        this->expStartLabel = buffer.genLabel();
     }
 }
 
@@ -77,6 +42,10 @@ bool ExpC::isString() const {
 
 bool ExpC::isByte() const {
     return this->type == "BYTE";
+}
+
+string ExpC::getExpStartLabel() const {
+    return this->expStartLabel;
 }
 
 /* Assures that the expression has a register with the result.
@@ -165,8 +134,8 @@ shared_ptr<ExpC> ExpC::getBinOpResult(shared_ptr<STypeC> stype1, shared_ptr<STyp
     return shared_ptr<ExpC>(NEW(ExpC, (resultType, resultReg)));
 }
 
-void insertToListsFromLists(AddressList &aListFrom, AddressList &aListTo,
-                            AddressList &bListFrom, AddressList &bListTo) {
+static void insertToListsFromLists(AddressList &aListFrom, AddressList &aListTo,
+                                   AddressList &bListFrom, AddressList &bListTo) {
     aListTo.insert(aListTo.end(), aListFrom.begin(), aListFrom.end());
     bListTo.insert(bListTo.end(), bListFrom.begin(), bListFrom.end());
 }
@@ -392,6 +361,7 @@ shared_ptr<ExpC> ExpC::getCallResult(shared_ptr<FuncIdC> funcId, shared_ptr<STyp
 
     buffer.emit(resultAssignment + "call " + llvmRetType + " @" + funcId->getName() + "(" + expListStr + ")");
 
+    // This is valid as long as it doesn't derive from the Exp rule
     if (llvmRetType == "void") {
         return nullptr;
     }
@@ -450,22 +420,6 @@ void IdC::setRegisterName(string registerName) {
 }
 
 CallC::CallC(const string &type, const string &symbol) : STypeC(STCall), type(verifyRetTypeName(type)), symbol(symbol) {}
-
-string typeNameToLlvmType(const string &typeName) {
-    if (typeName == "VOID") {
-        return "void";
-    } else if (typeName == "INT") {
-        return "i32";
-    } else if (typeName == "BYTE") {
-        return "i8";
-    } else if (typeName == "BOOL") {
-        return "i1";
-    } else if (typeName == "STRING") {
-        return "i8*";
-    } else {
-        throw "Unsupported return type";
-    }
-}
 
 // Convert vector<shared_ptr<IdC>> to vector<string> of just the types
 static vector<string> getTypesFromIds(const vector<shared_ptr<IdC>> &ids) {
@@ -532,6 +486,7 @@ const string &FuncIdC::getType() const {
 const vector<string> &FuncIdC::getArgTypes() const {
     return this->argTypes;
 }
+
 vector<string> &FuncIdC::getArgTypes() {
     return this->argTypes;
 }
@@ -568,4 +523,112 @@ void verifyBoolType(shared_ptr<STypeC> exp) {
     if (not expType->isBool()) {
         errorMismatch(yylineno);
     }
+}
+
+string typeNameToLlvmType(const string &typeName) {
+    if (typeName == "VOID") {
+        return "void";
+    } else if (typeName == "INT") {
+        return "i32";
+    } else if (typeName == "BYTE") {
+        return "i8";
+    } else if (typeName == "BOOL") {
+        return "i1";
+    } else if (typeName == "STRING") {
+        return "i8*";
+    } else {
+        throw "Unsupported return type";
+    }
+}
+
+const string &verifyAllTypeNames(const string &type) {
+    if (type == "INT" or type == "BOOL" or type == "BYTE" or type == "VOID" or type == "STRING" or type == "BAD_VIRTUAL_CALL") {
+        return type;
+    } else {
+        errorMismatch(yylineno);
+    }
+    // Never reaches here because errorMismatch exits
+    return type;
+}
+
+const string &verifyValTypeName(const string &type) {
+    if (verifyAllTypeNames(type) != "VOID") {
+        return type;
+    } else {
+        errorMismatch(yylineno);
+    }
+    // Never reaches here because errorMismatch exits
+    return type;
+}
+
+const string &verifyRetTypeName(const string &type) {
+    if (verifyAllTypeNames(type) != "STRING") {
+        return type;
+    } else {
+        errorMismatch(yylineno);
+    }
+    // Never reaches here because errorMismatch exits
+    return type;
+}
+
+const string &verifyVarTypeName(const string &type) {
+    if (verifyAllTypeNames(type) != "VOID") {
+        return type;
+    } else {
+        errorMismatch(yylineno);
+    }
+    // Never reaches here because errorMismatch exits
+    return type;
+}
+
+void handleIfStart(shared_ptr<STypeC> conditionStype) {
+    verifyBoolType(conditionStype);
+    shared_ptr<ExpC> condition = DC(ExpC, conditionStype);
+    auto &buffer = CodeBuffer::instance();
+    auto &ralloc = Ralloc::instance();
+
+    string trueLabel = buffer.genLabel();
+    buffer.bpatch(condition->boolTrueList, trueLabel);
+}
+
+shared_ptr<STypeC> handleIfEnd(shared_ptr<STypeC> conditionStype, bool hasElse) {
+    verifyBoolType(conditionStype);
+    shared_ptr<ExpC> condition = DC(ExpC, conditionStype);
+    auto &buffer = CodeBuffer::instance();
+    shared_ptr<STypeC> brEndElseInstrStype = nullptr;
+
+    if (hasElse) {
+        AddressIndPair brEndElseInstr = make_pair(buffer.emit("br label @"), FIRST);
+        brEndElseInstrStype = NEWSTD_V(AddressIndPair, brEndElseInstr);
+    }
+
+    string falseLabel = buffer.genLabel();
+    buffer.bpatch(condition->boolFalseList, falseLabel);
+
+    return brEndElseInstrStype;
+}
+
+void handleElseEnd(shared_ptr<STypeC> endIfListStype) {
+    AddressIndPair &endIfInstr = STYPE2STD(AddressIndPair, endIfListStype);
+
+    auto &buffer = CodeBuffer::instance();
+
+    string elseEndLabel = buffer.genLabel();
+    buffer.bpatch(buffer.makelist(endIfInstr), elseEndLabel);
+}
+
+void handleWhileEnd(shared_ptr<STypeC> conditionStype, shared_ptr<STypeC> startLabelStype) {
+    verifyBoolType(conditionStype);
+    shared_ptr<ExpC> condition = DC(ExpC, conditionStype);
+    string startLabel = STYPE2STD(string, startLabelStype);
+
+    auto &buffer = CodeBuffer::instance();
+
+    buffer.emit("br label " + condition->getExpStartLabel());
+    handleIfEnd(conditionStype, false);
+    string whileEndLabel = buffer.genLabel();
+
+    /* TODO: bpatch break/continue to whileEndLabel and condition->startLabel respectively.
+        Need to $$ = addrlist to bpatch in every statement/statements.
+    */
 }
