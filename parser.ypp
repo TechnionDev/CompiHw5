@@ -8,10 +8,10 @@
 #include "symbolTable.hpp"
 
 #define GET_SYM(x) symbolTable.getVarSymbol(STYPE2STD(string, x))
-#define GET_SYMTYPE(x) symbolTable.getVarSymbol(STYPE2STD(string, x))->getType()
+#define GET_SYMTYPE(x) GET_SYM(x)->getType()
 
 #define GET_FUNC(x) symbolTable.getFuncSymbol(STYPE2STD(string, x))
-#define GET_FUNCTYPE(x) symbolTable.getFuncSymbol(STYPE2STD(string, x))->getType()
+#define GET_FUNCTYPE(x) GET_FUNC(x)->getType()
 
 
 namespace yy {
