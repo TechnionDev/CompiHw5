@@ -95,7 +95,6 @@ class ExpC : public STypeC {
     AddressList boolTrueList;
     string expStartLabel;
 
-
    public:
     ExpC(const string &type, const string &reg);
     const string &getType() const;
@@ -105,8 +104,8 @@ class ExpC : public STypeC {
     bool isByte() const;
     string assureAndGetRegResultOfExpression();
 
-    const AddressList &getFalseList() const;
-    const AddressList &getTrueList() const;
+    const AddressList &getFalseList();
+    const AddressList &getTrueList();
 
     string getExpStartLabel() const;
     // Get result of bin operation on two expressions
@@ -123,6 +122,8 @@ class ExpC : public STypeC {
     static shared_ptr<ExpC> loadIdValue(shared_ptr<IdC> idSymbol, string stackVariablesPtrReg);
     // Get shared_ptr<ExpC> from string literal
     static shared_ptr<ExpC> loadStringLiteralAddr(string literal);
+    // Ansure there's a true and false lists. If either is zero, force concrete value for the expression and create conditional jump and add placeholders to falselist
+    void ensureTrueFalseList();
 };
 
 class CallC : public STypeC {

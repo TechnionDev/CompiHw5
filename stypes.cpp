@@ -44,11 +44,23 @@ bool ExpC::isByte() const {
     return this->type == "BYTE";
 }
 
-const AddressList &ExpC::getFalseList() const {
+void ExpC::ensureTrueFalseList() {
+    if (this->boolTrueList.size() == 0 or this->boolFalseList.size() == 0) {
+        this->assureAndGetRegResultOfExpression();
+        auto &buffer = CodeBuffer::instance();
+        int instrAddr = buffer.emit("br i1 " + this->registerOrImmediate + ", label @, label @");
+        this->boolTrueList.push_back(make_pair(instrAddr, FIRST));
+        this->boolFalseList.push_back(make_pair(instrAddr, SECOND));
+    }
+}
+
+const AddressList &ExpC::getFalseList() {
+    this->ensureTrueFalseList();
     return this->boolFalseList;
 }
 
-const AddressList &ExpC::getTrueList() const {
+const AddressList &ExpC::getTrueList() {
+    this->ensureTrueFalseList();
     return this->boolTrueList;
 }
 
@@ -70,7 +82,7 @@ string ExpC::assureAndGetRegResultOfExpression() {
     auto &buffer = CodeBuffer::instance();
 
     // Create a new register for the result
-    string resultReg = ralloc.getNextReg("assureExpressionResultReg");
+    string resultReg = ralloc.getNextReg("assureExpressionResult");
     AddressList resLabelsList;
 
     // Backpatch true and false lists
@@ -83,7 +95,7 @@ string ExpC::assureAndGetRegResultOfExpression() {
     buffer.bpatch(this->boolFalseList, falseLabel);
     // Use phi to merge true and false registers
     string phiLabel = buffer.genLabel("assureRegPhi");
-    buffer.emit(resultReg + " = phi i1 [true, " + trueLabel + "], [false, " + falseLabel + "]");
+    buffer.emit(resultReg + " = phi i1 [true, %" + trueLabel + "], [false, %" + falseLabel + "]");
     buffer.bpatch(resLabelsList, phiLabel);
     this->registerOrImmediate = resultReg;
     return resultReg;
@@ -99,7 +111,7 @@ shared_ptr<ExpC> ExpC::getBinOpResult(shared_ptr<STypeC> stype1, shared_ptr<STyp
     string resultType;
     string divOp;
     string opStr;
-    string resultReg = ralloc.getNextReg("getBinOpResultReg");
+    string resultReg = ralloc.getNextReg("getBinOpResult");
 
     if (not isImpliedCastAllowed(stype1, stype2)) {
         errorMismatch(yylineno);
@@ -176,27 +188,27 @@ shared_ptr<ExpC> ExpC::evalBool(shared_ptr<STypeC> stype1, shared_ptr<STypeC> st
     AddressList exp2SecondList;
 
     // Emit the llvm ir code
-    if (exp1->registerOrImmediate != "") {
+    if (exp1->registerOrImmediate == "") {
+        exp1StartLabel = exp1->expStartLabel;
+        exp1FirstList = exp1->boolTrueList;
+        exp1SecondList = exp1->boolFalseList;
+    } else {
         exp1StartLabel = codeBuffer.genLabel("evalBoolExp1Start");
         instAddr = codeBuffer.emit("br i1 " + exp1->registerOrImmediate + ", label @, label @");
         exp1FirstList = CodeBuffer::makelist(make_pair(instAddr, FIRST));
         exp1SecondList = CodeBuffer::makelist(make_pair(instAddr, SECOND));
-    } else {
-        exp1StartLabel = exp1->expStartLabel;
-        exp1FirstList = exp1->boolTrueList;
-        exp1SecondList = exp1->boolFalseList;
     }
 
     if (exp2) {
-        if (exp2->registerOrImmediate != "") {
+        if (exp2->registerOrImmediate == "") {
+            exp2StartLabel = exp2->expStartLabel;
+            exp2FirstList = exp2->boolTrueList;
+            exp2SecondList = exp2->boolFalseList;
+        } else {
             exp2StartLabel = codeBuffer.genLabel("evalBoolExp2Start");
             instAddr = codeBuffer.emit("br i1 " + exp2->registerOrImmediate + ", label @, label @");
             exp2FirstList = CodeBuffer::makelist(make_pair(instAddr, FIRST));
             exp2SecondList = CodeBuffer::makelist(make_pair(instAddr, SECOND));
-        } else {
-            exp2StartLabel = exp2->expStartLabel;
-            exp2FirstList = exp2->boolTrueList;
-            exp2SecondList = exp2->boolFalseList;
         }
 
         // Decide on the integration between backpatch lists of first condiction (AND/OR)
@@ -297,7 +309,7 @@ shared_ptr<ExpC> ExpC::getCmpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC
             throw "Unsupported operation to getCmpResult";
     }
 
-    string resultReg = ralloc.getNextReg("getCmpOpResultReg");
+    string resultReg = ralloc.getNextReg("getCmpOpResult");
     codeBuffer.emit(resultReg + " = icmp " + cmpOpStr + regSizeofDecorator + exp1RegOrImm);
     return NEW(ExpC, ("BOOL", resultReg));
 }
@@ -326,7 +338,7 @@ shared_ptr<ExpC> ExpC::getCastResult(shared_ptr<STypeC> dstStype, shared_ptr<STy
 
     Ralloc &ralloc = Ralloc::instance();
     CodeBuffer &codeBuffer = CodeBuffer::instance();
-    string resultReg = ralloc.getNextReg("getCastResultReg");
+    string resultReg = ralloc.getNextReg("getCastResult");
 
     if (exp->isInt() and dstType->getTypeName() == "BYTE") {
         codeBuffer.emit(resultReg + " = trunc i32 " + exp->assureAndGetRegResultOfExpression() + " to i8");
@@ -343,7 +355,7 @@ shared_ptr<ExpC> ExpC::getCallResult(shared_ptr<FuncIdC> funcId, shared_ptr<STyp
     auto &ralloc = Ralloc::instance();
     auto &buffer = CodeBuffer::instance();
     string llvmRetType = typeNameToLlvmType(funcId->getType());
-    string resultReg = ralloc.getNextReg("getCallResultReg");
+    string resultReg = ralloc.getNextReg("getCallResult");
     string resultAssignment = llvmRetType == "void" ? "" : (resultReg + " = ");
     string expListStr = "";
     auto &formalsTypes = funcId->getArgTypes();
@@ -382,13 +394,16 @@ shared_ptr<ExpC> ExpC::loadIdValue(shared_ptr<IdC> idSymbol, string stackVariabl
     Ralloc &ralloc = Ralloc::instance();
 
     string llvmType = typeNameToLlvmType(idSymbol->getType());
-    string offsetReg = ralloc.getNextReg("loadIdOffsetReg");
-    string idAddrReg = ralloc.getNextReg("loadIdIdAddrReg");
-    string expReg = ralloc.getNextReg("loadIdExpReg");
+    string offsetReg = ralloc.getNextReg("loadIdOffset");
+    string idAddrReg = ralloc.getNextReg("loadIdIdAddr");
+    string expReg = ralloc.getNextReg("loadIdExp");
 
-    codeBuffer.emit(offsetReg + " = i32 " + std::to_string(idSymbol->getOffset()));
+    codeBuffer.emit(offsetReg + " = add i32 0, " + std::to_string(idSymbol->getOffset()));
     codeBuffer.emit(idAddrReg + " = getelementptr i32, i32* " + stackVariablesPtrReg + ", i32 " + offsetReg);
-    codeBuffer.emit(expReg + " = load " + llvmType + ", " + llvmType + "* " + idAddrReg);
+    string idAddrRegCorrectSize = ralloc.getNextReg("loadIdIdAddrCorrectSize");
+    codeBuffer.emit(idAddrRegCorrectSize + " = bitcast i32* " + idAddrReg + " to " + llvmType + "*");
+
+    codeBuffer.emit(expReg + " = load " + llvmType + ", " + llvmType + "* " + idAddrRegCorrectSize);
 
     shared_ptr<ExpC> idValue = NEW(ExpC, (idSymbol->getType(), expReg));
 
@@ -399,7 +414,7 @@ shared_ptr<ExpC> ExpC::loadStringLiteralAddr(string literal) {
     auto &ralloc = Ralloc::instance();
     auto &codeBuffer = CodeBuffer::instance();
     string strLiteralAutoGeneratedName = ralloc.getNextVarName();
-    string resultReg = ralloc.getNextReg("loadStringLiteralResultReg");
+    string resultReg = ralloc.getNextReg("loadStringLiteralResult");
     int literalLength = literal.length() + 1;  // + 1 for '\0'
 
     codeBuffer.emitGlobal(strLiteralAutoGeneratedName + " = constant [" +
@@ -635,9 +650,9 @@ void handleIfStart(shared_ptr<STypeC> conditionStype) {
     verifyBoolType(conditionStype);
     shared_ptr<ExpC> condition = DC(ExpC, conditionStype);
     auto &buffer = CodeBuffer::instance();
-
+    auto trueList = condition->getTrueList();
     string trueLabel = buffer.genLabel("ifStart");
-    buffer.bpatch(condition->getTrueList(), trueLabel);
+    buffer.bpatch(trueList, trueLabel);
 }
 
 shared_ptr<STypeC> handleIfEnd(shared_ptr<STypeC> conditionStype, bool hasElse) {
@@ -651,8 +666,10 @@ shared_ptr<STypeC> handleIfEnd(shared_ptr<STypeC> conditionStype, bool hasElse) 
         brEndElseInstrStype = NEWSTD_V(AddressIndPair, (brEndElseInstr));
     }
 
+    auto falseList = condition->getFalseList();
+
     string falseLabel = buffer.genLabel("ifEnd");
-    buffer.bpatch(condition->getFalseList(), falseLabel);
+    buffer.bpatch(falseList, falseLabel);
 
     return brEndElseInstrStype;
 }
@@ -678,7 +695,7 @@ void handleWhileEnd(shared_ptr<STypeC> conditionStype) {
 
     auto &buffer = CodeBuffer::instance();
 
-    buffer.emit("br label " + condition->getExpStartLabel());
+    buffer.emit("br label %" + condition->getExpStartLabel());
 
     /* `endLoop` must be called after we emit the br to jump to the beginning of the
      * condition (becuase endLoop will generate the endLabel to which we jump from the falseList and break statements)

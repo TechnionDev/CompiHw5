@@ -101,20 +101,8 @@ Statement:      LBRACE OpenScope Statements RBRACE CloseScope
                 | AUTO ID ASSIGN Exp SC             { addAutoSymbolWithExp(symbolTable, $2, $4); }
                 | ID ASSIGN Exp SC                  { tryAssignExp(symbolTable, $1, $3, yylineno); }
                 | Call SC                           {}
-                | RETURN SC                         {
-                                                        if (symbolTable.retType == nullptr) {
-                                                            throw "This should be impossible. Syntax error wise";
-                                                        } else if (symbolTable.retType->getTypeName() != "VOID") {
-                                                            errorMismatch(yylineno);
-                                                        }
-                                                    }
-                | RETURN Exp SC                     {
-                                                        if (symbolTable.retType == nullptr) {
-                                                            throw "This should be impossible. Syntax error wise";
-                                                        } else if (not areStrTypesCompatible(symbolTable.retType->getTypeName(), DC(ExpC, $2)->getType())) {
-                                                            errorMismatch(yylineno);
-                                                        }
-                                                    }
+                | RETURN SC                         { handleReturn(symbolTable.retType, yylineno); }
+                | RETURN Exp SC                     { handleReturnExp(symbolTable.retType, $2, yylineno); }
                 | IF LPAREN BoolExp RPAREN OpenScope IfStart Statement CloseScope %prec IF { handleIfEnd($3); }
                 | IF LPAREN BoolExp RPAREN OpenScope IfStart Statement CloseScope ELSE { $$ = handleIfEnd($3, true); } OpenScope  Statement CloseScope { handleElseEnd($10); }
                 | WHILE LPAREN BoolExp RPAREN { handleWhileStart($3); } OpenScope Statement CloseScope %prec WHILE { handleWhileEnd($3); }

@@ -127,7 +127,7 @@ void SymbolTable::addSymbol(shared_ptr<IdC> type) {
 
 void SymbolTable::addContinue() {
     auto &buffer = CodeBuffer::instance();
-    buffer.emit("br label " + this->loopCondStartLabelStack.back());
+    buffer.emit("br label %" + this->loopCondStartLabelStack.back());
 }
 
 void SymbolTable::addBreak() {
@@ -264,7 +264,7 @@ void emitAssign(shared_ptr<IdC> symbol, shared_ptr<ExpC> exp, string stackVariab
     string offsetReg = ralloc.getNextReg("offsetEmitAssign");
     string idAddrReg = ralloc.getNextReg("idAddrEmitAssign");
 
-    string idAddrRegCorrectSize = ralloc.getNextReg();
+    string idAddrRegCorrectSize = ralloc.getNextReg("idAddrCorrect_" + symbol->getName());
 
     codeBuffer.emit(offsetReg + " = add i32 0, " + std::to_string(symbol->getOffset()));
     codeBuffer.emit(idAddrReg + " = getelementptr i32, i32* " + stackVariablesPtrReg + ", i32 " + offsetReg);
@@ -272,4 +272,43 @@ void emitAssign(shared_ptr<IdC> symbol, shared_ptr<ExpC> exp, string stackVariab
     codeBuffer.emit(idAddrRegCorrectSize + " = bitcast i32* " + idAddrReg + " to " + llvmType + "*");
 
     codeBuffer.emit("store " + llvmType + " " + exp->assureAndGetRegResultOfExpression() + ", " + llvmType + "* " + idAddrRegCorrectSize);
+}
+
+void handleReturn(shared_ptr<RetTypeNameC> retType, int lineno) {
+    if (retType == nullptr) {
+        throw "This should be impossible. Syntax error wise";
+    } else if (retType->getTypeName() != "VOID") {
+        errorMismatch(lineno);
+    }
+
+    emitReturn(retType, nullptr);
+}
+
+void handleReturnExp(shared_ptr<RetTypeNameC> retType, shared_ptr<STypeC> rawExp, int lineno) {
+    shared_ptr<ExpC> exp = DC(ExpC, rawExp);
+
+    if (retType == nullptr) {
+        throw "This should be impossible. Syntax error wise";
+    } else if (not areStrTypesCompatible(retType->getTypeName(), exp->getType())) {
+        errorMismatch(lineno);
+    }
+
+    emitReturn(retType, exp);
+}
+
+void emitReturn(shared_ptr<RetTypeNameC> retType, shared_ptr<ExpC> exp) {
+    CodeBuffer &codeBuffer = CodeBuffer::instance();
+
+    if (retType->getTypeName() != exp->getType()) {
+        throw "this should be impossible. wrong function usage.";
+    }
+    
+    string llvmType = typeNameToLlvmType(exp->getType());
+    string code = "ret " + llvmType;
+
+    if (retType->getTypeName() != "VOID") {
+        code += " " + exp->assureAndGetRegResultOfExpression();
+    }
+
+    codeBuffer.emit(code);
 }

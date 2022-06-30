@@ -53,5 +53,8 @@ void tryAssignExp(SymbolTable &symbolTable, shared_ptr<STypeC> rawId, shared_ptr
 
 void emitAssign(shared_ptr<IdC> symbol, shared_ptr<ExpC> exp, string stackVariablesPtrReg);
 void addUninitializedSymbol(SymbolTable &symbolTable, shared_ptr<STypeC> rawSymbol);
+void handleReturn(shared_ptr<RetTypeNameC> retType, int lineno);
+void handleReturnExp(shared_ptr<RetTypeNameC> retType, shared_ptr<STypeC> rawExp, int lineno);
+void emitReturn(shared_ptr<RetTypeNameC> retType, shared_ptr<ExpC> exp);
 
 #endif

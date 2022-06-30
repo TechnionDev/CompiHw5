@@ -38,6 +38,10 @@ extern SymbolTable symbolTable;
 int CodeBuffer::emit(const string& s) {
     int indentationDepth = symbolTable.getCurrentScopeDepth();
     string indentationStr(indentationDepth, '\t');
+    // Skip both this and prev emit start with br
+    if (s.substr(0, 9) == "br label " and buffer.back().find("br ") != string::npos) {
+        return buffer.size() - 1;
+    }
 
     buffer.push_back(indentationStr + s);
     return buffer.size() - 1;
@@ -53,7 +57,12 @@ void CodeBuffer::bpatch(const vector<pair<int, BranchLabelIndex>>& address_list,
 
 void CodeBuffer::printCodeBuffer() {
     for (std::vector<string>::const_iterator it = buffer.begin(); it != buffer.end(); ++it) {
-        cout << *it << endl;
+        // Check if "label @" in in *it
+        if (it->find("label @") == string::npos) {
+            cout << *it << endl;
+        } else {
+			cout << "; DEBUG: removed> " << *it << endl;
+		}
     }
 }
 
