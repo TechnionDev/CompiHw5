@@ -152,8 +152,8 @@ shared_ptr<ExpC> ExpC::getBinOpResult(shared_ptr<STypeC> stype1, shared_ptr<STyp
     return shared_ptr<ExpC>(NEW(ExpC, (resultType, resultReg)));
 }
 
-static void insertToListsFromLists(AddressList &aListFrom, AddressList &aListTo,
-                                   AddressList &bListFrom, AddressList &bListTo) {
+static void insertToListsFromLists(AddressList &aListTo, AddressList &aListFrom,
+                                   AddressList &bListTo, AddressList &bListFrom) {
     aListTo.insert(aListTo.end(), aListFrom.begin(), aListFrom.end());
     bListTo.insert(bListTo.end(), bListFrom.begin(), bListFrom.end());
 }
