@@ -1,0 +1,13 @@
+void maxTestsTestUpdateVariableInsideWhile() {
+	auto x = 0;
+	while (x < 5) {
+		auto y = 1;
+		printi(y);
+		y = y + 1;
+		x = x + 1;
+	}
+}
+
+void main() {
+     maxTestsTestUpdateVariableInsideWhile();
+}

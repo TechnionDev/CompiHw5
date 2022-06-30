@@ -1,0 +1,16 @@
+B:
+TRUE
+C:
+0
+D:
+TRUE
+E:
+1
+TRUE
+F:
+0
+G:
+H:
+1
+TRUE
+I:

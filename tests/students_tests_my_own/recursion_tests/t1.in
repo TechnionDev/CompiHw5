@@ -1,0 +1,17 @@
+int foo(int n){
+	if (n==0)
+		return 0;
+	if (n==1)
+		return 1;
+	return foo(n-2);
+}
+
+void main()
+{
+	printi(foo(5));
+	printi(foo(4));
+	printi(foo(3));
+	printi(foo(2));
+	printi(foo(1));
+	printi(foo(0));
+}

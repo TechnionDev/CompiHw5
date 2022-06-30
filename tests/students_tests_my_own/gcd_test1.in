@@ -1,0 +1,15 @@
+int gcd(int a,int c)
+{
+	if(a<c)
+		return gcd(c,a);
+	if (c==0)
+		return a;
+	int div = a/c; // todo ask
+	int mod = a - (div*c);
+	return gcd(c,mod);
+}
+
+void main()
+{
+	printi(gcd(121,33));
+}

@@ -1,0 +1,11 @@
+void maxTestsArithmeticBetweenVars() {
+	auto x = 3;
+	auto y = 7;
+	auto z = 31;
+	auto t = x + y + z * x - y / z;
+	printi(t);
+}
+
+void main() {
+     maxTestsArithmeticBetweenVars();
+}

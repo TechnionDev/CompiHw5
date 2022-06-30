@@ -1,0 +1,17 @@
+void main(){
+	while(false) print("must not be printed");
+	int x;
+	byte y = 1 b;
+	while(x <= 10){
+		// print("2^");
+		// printi(x);
+		// print(" = ");
+		printi(y);
+		x = x + 1;
+		y = y * 2b;
+	}
+	while(true) {
+		print("end");
+		return;
+	}
+}
