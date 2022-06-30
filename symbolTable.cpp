@@ -263,6 +263,7 @@ void emitAssign(shared_ptr<IdC> symbol, shared_ptr<ExpC> exp, string stackVariab
     string llvmType = typeNameToLlvmType(exp->getType());
     string offsetReg = ralloc.getNextReg("offsetEmitAssign");
     string idAddrReg = ralloc.getNextReg("idAddrEmitAssign");
+    string expReg = exp->assureAndGetRegResultOfExpression();
 
     string idAddrRegCorrectSize = ralloc.getNextReg("idAddrCorrect_" + symbol->getName());
 
@@ -271,7 +272,7 @@ void emitAssign(shared_ptr<IdC> symbol, shared_ptr<ExpC> exp, string stackVariab
 
     codeBuffer.emit(idAddrRegCorrectSize + " = bitcast i32* " + idAddrReg + " to " + llvmType + "*");
 
-    codeBuffer.emit("store " + llvmType + " " + exp->assureAndGetRegResultOfExpression() + ", " + llvmType + "* " + idAddrRegCorrectSize);
+    codeBuffer.emit("store " + llvmType + " " + expReg + ", " + llvmType + "* " + idAddrRegCorrectSize);
 }
 
 void handleReturn(shared_ptr<RetTypeNameC> retType, int lineno) {
