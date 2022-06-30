@@ -65,7 +65,7 @@ escapechars     ([\\"nrt0])
 ({letter}({letter}|{digit})*)       {yylval = NEWSTD_V(std::string, (yytext)); return ID;}
 (0{digit}+)                         error_unprintable_char(*yytext);
 (0|{nozerodigit}{digit}*)           {yylval = NEWSTD_V(std::string, (yytext)); return NUM;}
-(\"([^\n\r\"\\]|\\[rnt"\\])+\")     {return STRING;}
+(\"([^\n\r\"\\]|\\[rnt"\\])+\")     {yylval = NEWSTD_V(std::string, (yytext)); return STRING;}
 .                                   {errorLex(yylineno);}
 %%
 
