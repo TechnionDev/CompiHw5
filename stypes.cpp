@@ -138,7 +138,7 @@ shared_ptr<ExpC> ExpC::getBinOpResult(shared_ptr<STypeC> stype1, shared_ptr<STyp
             errorMismatch(yylineno);
     }
 
-    codeBuffer.emit(resultReg + " = " + opStr + " " + resultSizeof + " " + exp1->registerOrImmediate + ", " + exp2->registerOrImmediate);
+    codeBuffer.emit(resultReg + " = " + opStr + " " + resultSizeof + " " + exp1->assureAndGetRegResultOfExpression() + ", " + exp2->assureAndGetRegResultOfExpression());
     return shared_ptr<ExpC>(NEW(ExpC, (resultType, resultReg)));
 }
 
@@ -260,17 +260,17 @@ shared_ptr<ExpC> ExpC::getCmpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC
     Ralloc &ralloc = Ralloc::instance();
     CodeBuffer &codeBuffer = CodeBuffer::instance();
 
-    string exp1RegOrImm = exp1->registerOrImmediate;
-    string exp2RegOrImm = exp2->registerOrImmediate;
+    string exp1RegOrImm = exp1->assureAndGetRegResultOfExpression();
+    string exp2RegOrImm = exp2->assureAndGetRegResultOfExpression();
 
     if (exp1->isInt() or exp2->isInt()) {
         regSizeofDecorator = " i32 ";
-        if (exp1->isByte() and exp1->registerOrImmediate[0] == '%') {
+        if (exp1->isByte() and exp1RegOrImm[0] == '%') {
             exp1RegOrImm = ralloc.getNextReg();
-            codeBuffer.emit(exp1RegOrImm + " = zext i8 to i32 " + exp1->registerOrImmediate[0]);
-        } else if (exp2->isByte() and exp2->registerOrImmediate[0] == '%') {
+            codeBuffer.emit(exp1RegOrImm + " = zext i8 to i32 " + exp1RegOrImm[0]);
+        } else if (exp2->isByte() and exp2RegOrImm[0] == '%') {
             exp2RegOrImm = ralloc.getNextReg();
-            codeBuffer.emit(exp2RegOrImm + " = zext i8 to i32 " + exp2->registerOrImmediate[0]);
+            codeBuffer.emit(exp2RegOrImm + " = zext i8 to i32 " + exp2RegOrImm[0]);
         }
     } else {
         regSizeofDecorator = " i8 ";
@@ -300,7 +300,7 @@ shared_ptr<ExpC> ExpC::getCmpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC
     }
 
     string resultReg = ralloc.getNextReg();
-    codeBuffer.emit(resultReg + " = icmp " + cmpOpStr + regSizeofDecorator + exp1->registerOrImmediate);
+    codeBuffer.emit(resultReg + " = icmp " + cmpOpStr + regSizeofDecorator + exp1RegOrImm);
     return NEW(ExpC, ("BOOL", resultReg));
 }
 
@@ -331,11 +331,11 @@ shared_ptr<ExpC> ExpC::getCastResult(shared_ptr<STypeC> dstStype, shared_ptr<STy
     string resultReg = ralloc.getNextReg();
 
     if (exp->isInt() and dstType->getTypeName() == "BYTE") {
-        codeBuffer.emit(resultReg + " = trunc i32 " + exp->registerOrImmediate + " to i8");
+        codeBuffer.emit(resultReg + " = trunc i32 " + exp->assureAndGetRegResultOfExpression() + " to i8");
     } else if (exp->isByte() and dstType->getTypeName() == "INT") {
-        codeBuffer.emit(resultReg + " = zext i8 " + exp->registerOrImmediate + " to i32");
+        codeBuffer.emit(resultReg + " = zext i8 " + exp->assureAndGetRegResultOfExpression() + " to i32");
     } else {
-        codeBuffer.emit(resultReg + " = add " + typeNameToLlvmType(exp->getType()) + " " + exp->registerOrImmediate + ", 0");
+        codeBuffer.emit(resultReg + " = add " + typeNameToLlvmType(exp->getType()) + " " + exp->assureAndGetRegResultOfExpression() + ", 0");
     }
     return NEW(ExpC, (dstType->getTypeName(), resultReg));
 }
@@ -359,7 +359,7 @@ shared_ptr<ExpC> ExpC::getCallResult(shared_ptr<FuncIdC> funcId, shared_ptr<STyp
             errorPrototypeMismatch(yylineno, funcId->getName(), formalsTypes);
         }
 
-        expListStr += typeNameToLlvmType(args[i]->getType()) + " " + args[i]->registerOrImmediate + ", ";
+        expListStr += typeNameToLlvmType(args[i]->getType()) + " " + args[i]->assureAndGetRegResultOfExpression() + ", ";
     }
 
     if (expListStr.size() > 0) {
