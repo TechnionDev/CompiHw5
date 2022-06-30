@@ -104,6 +104,7 @@ class ExpC : public STypeC {
     bool isBool() const;
     bool isString() const;
     bool isByte() const;
+    string getRegisterOrImmediate() const;
 
     const AddressList &getFalseList() const;
     const AddressList &getTrueList() const;
@@ -120,7 +121,7 @@ class ExpC : public STypeC {
     // Get shared_ptr<ExpC> from a function call
     static shared_ptr<ExpC> getCallResult(shared_ptr<FuncIdC> funcIdStype, shared_ptr<STypeC> argsStype);
     // Get shared_ptr<ExpC> from variable ID
-    static shared_ptr<ExpC> loadIdValue(shared_ptr<IdC> idSymbol);
+    static shared_ptr<ExpC> loadIdValue(shared_ptr<IdC> idSymbol, string stackVariablesPtrReg);
     // Get shared_ptr<ExpC> from string literal
     static shared_ptr<ExpC> loadStringLiteralAddr(string literal);
 };

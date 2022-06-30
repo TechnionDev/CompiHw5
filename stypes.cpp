@@ -44,6 +44,10 @@ bool ExpC::isByte() const {
     return this->type == "BYTE";
 }
 
+string ExpC::getRegisterOrImmediate() const {
+    return this->registerOrImmediate;
+}
+
 const AddressList &ExpC::getFalseList() const {
     return this->boolFalseList;
 }
@@ -379,8 +383,22 @@ shared_ptr<ExpC> ExpC::getCallResult(shared_ptr<FuncIdC> funcId, shared_ptr<STyp
     return resultExp;
 }
 
-shared_ptr<ExpC> ExpC::loadIdValue(shared_ptr<IdC> idSymbol) {
-    return NEW(ExpC, (idSymbol->getType(), idSymbol->getRegisterName()));
+shared_ptr<ExpC> ExpC::loadIdValue(shared_ptr<IdC> idSymbol, string stackVariablesPtrReg) {
+    CodeBuffer &codeBuffer = CodeBuffer::instance();
+    Ralloc &ralloc = Ralloc::instance();
+
+    string llvmType = typeNameToLlvmType(idSymbol->getType());
+    string offsetReg = ralloc.getNextReg();
+    string idAddrReg = ralloc.getNextReg();
+    string expReg = ralloc.getNextReg();
+
+    codeBuffer.emit(offsetReg + " = " + std::to_string(idSymbol->getOffset()));
+    codeBuffer.emit(idAddrReg + " = getelementptr i32, i32* " + stackVariablesPtrReg + ", i32 " + offsetReg);
+    codeBuffer.emit(expReg + " = load " + llvmType + ", ptr " + idAddrReg);
+
+    shared_ptr<ExpC> idValue = NEW(ExpC, (idSymbol->getType(), expReg));
+
+    return idValue;
 }
 
 shared_ptr<ExpC> ExpC::loadStringLiteralAddr(string literal) {

@@ -44,5 +44,13 @@ class SymbolTable {
 };
 
 void verifyMainExists(SymbolTable &symbolTable);
+void tryAddSymbolWithExp(SymbolTable &symbolTable, shared_ptr<STypeC> rawSymbol,
+                         shared_ptr<STypeC> rawExp, int lineno);
+void addAutoSymbolWithExp(SymbolTable &symbolTable, shared_ptr<STypeC> rawId,
+                          shared_ptr<STypeC> rawExp);
+void tryAssignExp(SymbolTable &symbolTable, shared_ptr<STypeC> rawId, shared_ptr<STypeC> rawExp,
+                  int lineno);
+
+void emitAssign(shared_ptr<IdC> symbol, shared_ptr<ExpC> exp, string stackVariablesPtrReg);
 
 #endif
