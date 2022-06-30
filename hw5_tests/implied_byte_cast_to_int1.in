@@ -1,7 +1,7 @@
 void main() {
     byte a = 200b;
-    int b = 100;
-    int c = a + b;
+    int d = 100;
+    int c = a + d;
 
     printi(c);
 }

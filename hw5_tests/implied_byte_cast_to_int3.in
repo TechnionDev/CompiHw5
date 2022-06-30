@@ -1,11 +1,11 @@
-int add(int c, int d) {
-    return c + d;
+int add(int c, int e) {
+    return c + e;
 }
 
 void main() {
     byte a = 200b;
-    int b = 100;
-    int c = add(a, b);
+    int d = 100;
+    int c = add(a, d);
 
     printi(c);
 }

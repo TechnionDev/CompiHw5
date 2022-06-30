@@ -1,6 +1,6 @@
 void main() {
     byte a = 200b;
-    int b = 100;
+    int d = 100;
 
-    printi(a + b);
+    printi(a + d);
 }
