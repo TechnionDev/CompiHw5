@@ -93,20 +93,10 @@ Statements:     Statement                           {}
 OpenScope:      /* epsilon */ %empty                { symbolTable.addScope(); };
 CloseScope:     /* epsilon */ %empty                { symbolTable.removeScope(); };
 Statement:      LBRACE OpenScope Statements RBRACE CloseScope
-                | TypeDecl SC                       { symbolTable.addSymbol(DC(IdC, $1)); }
-                | TypeDecl ASSIGN Exp SC            {
-                                                        auto symbol = DC(IdC, $1);
-                                                        symbolTable.addSymbol(symbol);
-                                                        if (not areStrTypesCompatible(symbol->getType(), DC(ExpC, $3)->getType())) {
-                                                            errorMismatch(yylineno);
-                                                        }
-                                                    }
-                | AUTO ID ASSIGN Exp SC             { symbolTable.addSymbol(NEW(IdC,(STYPE2STD(string, $2), DC(ExpC, $4)->getType()))); }
-                | ID ASSIGN Exp SC                  {
-                                                        if (not areStrTypesCompatible(GET_SYMTYPE($1), DC(ExpC,$3)->getType())) {
-                                                            errorMismatch(yylineno);
-                                                        }
-                                                    }
+                | TypeDecl SC                       { addUninitializedSymbol(symbolTable, $1); }
+                | TypeDecl ASSIGN Exp SC            { tryAddSymbolWithExp(symbolTable, $1, $3, yylineno); }
+                | AUTO ID ASSIGN Exp SC             { addAutoSymbolWithExp(symbolTable, $2, $4); }
+                | ID ASSIGN Exp SC                  { tryAssignExp(symbolTable, $1, $3, yylineno); }
                 | Call SC                           {}
                 | RETURN SC                         {
                                                         if (symbolTable.retType == nullptr) {
@@ -162,7 +152,7 @@ Exp:            LPAREN Exp RPAREN                   { $$ = $2; }
                 | Exp SUBOP Exp                     { $$ = ExpC::getBinOpResult($1, $3, SUBOP); }
                 | Exp MULOP Exp                     { $$ = ExpC::getBinOpResult($1, $3, MULOP); }
                 | Exp DIVOP Exp                     { $$ = ExpC::getBinOpResult($1, $3, DIVOP); }
-                | ID                                { $$ = ExpC::loadIdValue(GET_SYM($1)); } // TODO: Implement
+                | ID                                { $$ = ExpC::loadIdValue(GET_SYM($1), symbolTable.stackVariablesPtrReg); }
                 | Call                              { $$ = $1 != nullptr ? $1: throw "Can't derive Call from Exp for void functions"; }
                 | NUM                               { $$ = NEW(ExpC,("INT", STYPE2STD(string, $1))); }
                 | NUM B                             { $$ = NEW(ExpC,("BYTE", STYPE2STD(string, $1))); }

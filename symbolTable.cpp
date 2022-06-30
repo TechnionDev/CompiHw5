@@ -1,6 +1,7 @@
 #include "symbolTable.hpp"
 
 #include "hw3_output.hpp"
+#include "ralloc.hpp"
 #include "parser.tab.hpp"
 
 using namespace output;
@@ -194,4 +195,69 @@ void verifyMainExists(SymbolTable &symbolTable) {
     }
 
     symbolTable.removeScope();
+}
+
+// no need to "try" because we don't have a danger of conflicting types here
+void addUninitializedSymbol(SymbolTable &symbolTable, shared_ptr<STypeC> rawSymbol) {
+    shared_ptr<IdC> symbol = DC(IdC, rawSymbol);
+    shared_ptr<ExpC> zeroExp = NEW(ExpC,(symbol->getType(), "0"));
+
+    symbolTable.addSymbol(symbol);
+
+    emitAssign(symbol, zeroExp, symbolTable.stackVariablesPtrReg);
+}
+
+void tryAddSymbolWithExp(SymbolTable &symbolTable, shared_ptr<STypeC> rawSymbol,
+                         shared_ptr<STypeC> rawExp, int lineno) {
+    shared_ptr<IdC> symbol = DC(IdC, rawSymbol);
+    shared_ptr<ExpC> exp = DC(ExpC, rawExp);
+
+    if (not areStrTypesCompatible(symbol->getType(), exp->getType())) {
+        errorMismatch(lineno);
+    }
+
+    symbolTable.addSymbol(symbol); // now offset is set to symbol through shared ptr
+
+    emitAssign(symbol, exp, symbolTable.stackVariablesPtrReg);
+}
+
+// no need to "try" because we don't have a danger of conflicting types here
+void addAutoSymbolWithExp(SymbolTable &symbolTable, shared_ptr<STypeC> rawId,
+                          shared_ptr<STypeC> rawExp) {
+    string id = STYPE2STD(string, rawId);
+    shared_ptr<ExpC> exp = DC(ExpC, rawExp);
+    shared_ptr<IdC> symbol = NEW(IdC,(id, exp->getType()));
+
+    symbolTable.addSymbol(symbol); // now offset is set to symbol through shared ptr
+
+    emitAssign(symbol, exp, symbolTable.stackVariablesPtrReg);
+}
+
+void tryAssignExp(SymbolTable &symbolTable, shared_ptr<STypeC> rawId, shared_ptr<STypeC> rawExp,
+                  int lineno) {
+    string id = STYPE2STD(string, rawId);
+    shared_ptr<IdC> symbol = symbolTable.getVarSymbol(id);
+    shared_ptr<ExpC> exp = DC(ExpC, rawExp);
+
+    string symbolType = symbol->getType();
+    string expType = exp->getType();
+
+    if (not areStrTypesCompatible(symbolType, expType)) {
+        errorMismatch(lineno);
+    }
+
+    emitAssign(symbol, exp, symbolTable.stackVariablesPtrReg);
+}
+
+void emitAssign(shared_ptr<IdC> symbol, shared_ptr<ExpC> exp, string stackVariablesPtrReg) {
+    CodeBuffer &codeBuffer = CodeBuffer::instance();
+    Ralloc &ralloc = Ralloc::instance();
+
+    string llvmType = typeNameToLlvmType(exp->getType());
+    string offsetReg = ralloc.getNextReg();
+    string idAddrReg = ralloc.getNextReg();
+
+    codeBuffer.emit(offsetReg + " = " + std::to_string(symbol->getOffset()));
+    codeBuffer.emit(idAddrReg + " = getelementptr i32, i32* " + stackVariablesPtrReg + ", i32 " + offsetReg);
+    codeBuffer.emit("store " + llvmType + " " + exp->getRegisterOrImmediate() + ", ptr " + idAddrReg);
 }
