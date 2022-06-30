@@ -1,0 +1,9 @@
+void maxTestsCheckDivisionByZero() {
+	auto x = 0;
+	auto y = 30 / x;
+	printi(y);
+}
+
+void main() {
+     maxTestsCheckDivisionByZero();
+}

@@ -1,0 +1,25 @@
+void emptyReturn(int x) {
+	if (x == 0) {
+		print("Finished the emptyReturn recursion.");
+		return;
+	}
+	printi(x);
+	emptyReturn(x - 1);
+}
+
+int intReturn(int x) {
+	if (x == 0) {
+		return x;
+	}
+	int sum = x + intReturn(x - 1);
+	return sum;
+}
+
+void main() {
+	int starter = 10;
+	print("Lets start with emptyReturn function:");
+	emptyReturn(starter);
+	print("And now we will finish with the intReturn:");
+	int sum = intReturn(starter);
+	printi(sum);
+}

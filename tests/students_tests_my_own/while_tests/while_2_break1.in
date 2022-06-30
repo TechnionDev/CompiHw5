@@ -1,0 +1,7 @@
+void main(){
+	while(true){
+		break;
+		print("must not be printed\n");
+	}
+	print("Well done!");
+}

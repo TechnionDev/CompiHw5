@@ -1,0 +1,8 @@
+void maxTestsStressArithmeticOperations() {
+	auto x = 10 / 1 / 1 / 1 / 1 / 1 / 1 * 1 * 1 * 1 * 1 * 1 / 1 * 1 / 1 + 1 / 1 * 1 / 1;
+	printi(x);
+}
+
+void main() {
+     maxTestsStressArithmeticOperations();
+}

@@ -1,0 +1,98 @@
+
+void main(){
+	int big = 100;
+	int big2 = 100 b;
+	byte small = 6 b;
+	byte small2 = small;
+
+	// ==: 1true	2true 
+	if(big == big2){
+		print("1true");
+	} 
+	if(small == small2){
+		print("2true");
+	} 
+	if(big == small){
+		print("3true");
+	} 
+	if(small == big){
+		print("4true");
+	} 
+	
+
+
+	// !=: 3true 4true
+	if(big != big2){
+		print("1true");
+	} 
+	if(small != small2){
+		print("2true");
+	} 
+	if(big != small){
+		print("3true");
+	} 
+	if(small != big){
+		print("4true");
+	} 
+	
+
+	// <: 4true
+	if(big < big2){
+		print("1true");
+	} 
+	if(small < small2){
+		print("2true");
+	} 
+	if(big < small){
+		print("3true");
+	} 
+	if(small < big){
+		print("4true");
+	} 
+	
+
+	// <=: 1true 2true 4true
+	if(big <= big2){
+		print("1true");
+	} 
+	if(small <= small2){
+		print("2true");
+	} 
+	if(big <= small){
+		print("3true");
+	} 
+	if(small <= big){
+		print("4true");
+	} 
+	
+
+	// >: 3true 
+	if(big > big2){
+		print("1true");
+	} 
+	if(small > small2){
+		print("2true");
+	} 
+	if(big > small){
+		print("3true");
+	} 
+	if(small > big){
+		print("4true");
+	} 
+	
+
+	// >=: 1true 2true 3true 
+	if(big >= big2){
+		print("1true");
+	} 
+	if(small >= small2){
+		print("2true");
+	} 
+	if(big >= small){
+		print("3true");
+	} 
+	if(small >= big){
+		print("4true");
+	} 
+	
+}

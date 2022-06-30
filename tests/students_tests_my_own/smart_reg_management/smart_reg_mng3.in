@@ -1,0 +1,103 @@
+int foo0(int a, int d)
+{
+        return 0;
+}
+
+int foo1(int a, int d)
+{
+        return 1;
+}
+
+int foo2(int a, int d)
+{
+        return 2;
+}
+
+int foo3(int a, int d)
+{
+        return 3;
+}
+
+int foo4(int a, int d)
+{
+        return 4;
+}
+
+int foo5(int a, int d)
+{
+        return 5;
+}
+
+int foo6(int a, int d)
+{
+        return 6;
+}
+
+int foo7(int a, int d)
+{
+        return 7;
+}
+
+int foo8(int a, int d)
+{
+        return 8;
+}
+
+int foo9(int a, int d)
+{
+        return 9;
+}
+
+int foo10(int a, int d)
+{
+        return 10;
+}
+
+int foo11(int a, int d)
+{
+        return 11;
+}
+
+int foo12(int a, int d)
+{
+        return 12;
+}
+
+int foo13(int a, int d)
+{
+        return 13;
+}
+
+int foo14(int a, int d)
+{
+        return 14;
+}
+
+int foo15(int a, int d)
+{
+        return 15;
+}
+
+int foo16(int a, int d)
+{
+        return 16;
+}
+
+int foo17(int a, int d)
+{
+        return 17;
+}
+int foo18(int a, int d)
+{
+        return 17;
+}
+void main()
+{
+	int a = 1;
+	int d = 2;
+	print("left");
+	int res = foo0(0,foo1(1,foo2(2,foo3(3,foo4(4,foo5(5,foo6(6,foo7(7,foo8(8,foo9(9,foo10(10,foo11(11,foo12(12,foo13(13,foo14(14,foo15(15,foo16(4,4)))))))))))))))));
+        printi(res);
+	print("left");
+
+}

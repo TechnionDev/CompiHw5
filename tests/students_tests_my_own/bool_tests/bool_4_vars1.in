@@ -1,0 +1,20 @@
+void main(){
+	bool x = true;
+	if(x){
+		print("true");
+	} else {
+		print("false");
+	}
+	bool y = x and 3>5;
+	if(y){
+		print("true");
+	} else {
+		print("false");
+	}
+	x = x and not y;
+	if(x){
+		print("true");
+	} else {
+		print("false");
+	}
+}

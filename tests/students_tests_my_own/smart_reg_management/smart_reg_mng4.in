@@ -1,0 +1,24 @@
+int foo0(int a, int d)
+{
+        return 0;
+}
+
+int foo1(int a, int d)
+{
+        return 1;
+}
+
+int foo2(int a, int d)
+{
+        return 2;
+}
+
+
+void main()
+{
+	print("left");
+	int res = foo0(7,foo1(foo2(2,2),8));
+        printi(res);
+	print("both");
+
+}

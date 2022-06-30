@@ -1,0 +1,23 @@
+void main(){
+	int x = 2;
+	bool f3;
+	byte y;
+	{
+		bool f1 = true;
+		if(f1){
+			printi(y);
+			print("a");
+			bool f2 = false;
+			if(not f3){
+				print("b");
+				y = 1 b;
+				int z = y;
+			}
+		}
+		byte zz = 2 b;
+		zz = 3 b;
+		printi(y);
+	}
+	print("c");
+	printi(x);
+}

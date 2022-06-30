@@ -1,0 +1,13 @@
+not: 
+false
+true
+and: 
+true
+false
+false
+false
+or: 
+true
+true
+true
+false
