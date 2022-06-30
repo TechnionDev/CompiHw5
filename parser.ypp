@@ -126,7 +126,7 @@ Statement:      LBRACE OpenScope Statements RBRACE CloseScope
                         Statement CloseScope %prec IF { handleIfEnd($3); }
                 | IF LPAREN BoolExp RPAREN OpenScope { handleIfStart($3); } Statement CloseScope
                         ELSE OpenScope { $$ = handleIfEnd($3, true); } Statement CloseScope { handleElseEnd($11); }
-                | WHILE LPAREN BoolExp RPAREN { symbolTable.nestedLoopDepth++; $$ = handleIfStart($3); } OpenScope Statement CloseScope {symbolTable.nestedLoopDepth--; handleWhileEnd($3, $5); }
+                | WHILE LPAREN BoolExp RPAREN { handleWhileStart($3); } OpenScope Statement CloseScope { handleWhileEnd($3); }
                 | BREAK SC                          {
                                                         if (symbolTable.nestedLoopDepth == 0) {
                                                             errorUnexpectedBreak(yylineno);

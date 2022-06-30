@@ -16,6 +16,10 @@ class SymbolTable {
     vector<Offset> scopeStartOffsets;
     vector<string> formals;
     vector<vector<string>> scopeSymbols;
+
+    // For loops
+    vector<AddressList> breakListStack;
+    vector<string> loopCondStartLabelStack;
     Offset currOffset;
 
    public:
@@ -28,6 +32,11 @@ class SymbolTable {
     void removeScope();
     void addSymbol(shared_ptr<IdC> type);
     void addFormal(shared_ptr<IdC> type);
+    void addContinue();
+    void addBreak();
+    void startLoop(const string &loopCondStart);
+    void endLoop(const AddressList &falseList);
+    // pair<AddressList, AddressList> getBreakAndContAddrLists();
     shared_ptr<IdC> getVarSymbol(const string &name);
     shared_ptr<FuncIdC> getFuncSymbol(const string &name, bool shouldError = true);
     void printSymbolTable();

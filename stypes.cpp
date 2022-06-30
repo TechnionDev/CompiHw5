@@ -44,6 +44,14 @@ bool ExpC::isByte() const {
     return this->type == "BYTE";
 }
 
+const AddressList &ExpC::getFalseList() const {
+    return this->boolFalseList;
+}
+
+const AddressList &ExpC::getTrueList() const {
+    return this->boolTrueList;
+}
+
 string ExpC::getExpStartLabel() const {
     return this->expStartLabel;
 }
@@ -585,10 +593,9 @@ void handleIfStart(shared_ptr<STypeC> conditionStype) {
     verifyBoolType(conditionStype);
     shared_ptr<ExpC> condition = DC(ExpC, conditionStype);
     auto &buffer = CodeBuffer::instance();
-    auto &ralloc = Ralloc::instance();
 
     string trueLabel = buffer.genLabel();
-    buffer.bpatch(condition->boolTrueList, trueLabel);
+    buffer.bpatch(condition->getTrueList(), trueLabel);
 }
 
 shared_ptr<STypeC> handleIfEnd(shared_ptr<STypeC> conditionStype, bool hasElse) {
@@ -599,36 +606,39 @@ shared_ptr<STypeC> handleIfEnd(shared_ptr<STypeC> conditionStype, bool hasElse) 
 
     if (hasElse) {
         AddressIndPair brEndElseInstr = make_pair(buffer.emit("br label @"), FIRST);
-        brEndElseInstrStype = NEWSTD_V(AddressIndPair, brEndElseInstr);
+        brEndElseInstrStype = NEWSTD_V(AddressIndPair, (brEndElseInstr));
     }
 
     string falseLabel = buffer.genLabel();
-    buffer.bpatch(condition->boolFalseList, falseLabel);
+    buffer.bpatch(condition->getFalseList(), falseLabel);
 
     return brEndElseInstrStype;
 }
 
 void handleElseEnd(shared_ptr<STypeC> endIfListStype) {
     AddressIndPair &endIfInstr = STYPE2STD(AddressIndPair, endIfListStype);
-
     auto &buffer = CodeBuffer::instance();
 
     string elseEndLabel = buffer.genLabel();
     buffer.bpatch(buffer.makelist(endIfInstr), elseEndLabel);
 }
 
-void handleWhileEnd(shared_ptr<STypeC> conditionStype, shared_ptr<STypeC> startLabelStype) {
+void handleWhileStart(shared_ptr<STypeC> conditionStype) {
+    handleIfStart(conditionStype);
+    symbolTable.startLoop(DC(ExpC, conditionStype)->getExpStartLabel());
+}
+
+void handleWhileEnd(shared_ptr<STypeC> conditionStype) {
     verifyBoolType(conditionStype);
     shared_ptr<ExpC> condition = DC(ExpC, conditionStype);
-    string startLabel = STYPE2STD(string, startLabelStype);
+    string startLabel = condition->getExpStartLabel();
 
     auto &buffer = CodeBuffer::instance();
 
     buffer.emit("br label " + condition->getExpStartLabel());
-    handleIfEnd(conditionStype, false);
-    string whileEndLabel = buffer.genLabel();
 
-    /* TODO: bpatch break/continue to whileEndLabel and condition->startLabel respectively.
-        Need to $$ = addrlist to bpatch in every statement/statements.
-    */
+    /* `endLoop` must be called after we emit the br to jump to the beginning of the
+     * condition (becuase endLoop will generate the endLabel to which we jump from the falseList and break statements)
+     */
+    symbolTable.endLoop(condition->getFalseList());
 }

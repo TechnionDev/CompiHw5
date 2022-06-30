@@ -121,6 +121,35 @@ void SymbolTable::addSymbol(shared_ptr<IdC> type) {
     }
 }
 
+void SymbolTable::addContinue() {
+    auto &buffer = CodeBuffer::instance();
+    buffer.emit("br label " + this->loopCondStartLabelStack.back());
+}
+
+void SymbolTable::addBreak() {
+    auto &buffer = CodeBuffer::instance();
+    AddressIndPair instruction = make_pair(buffer.emit("br label @"), FIRST);
+    this->breakListStack.back().push_back(instruction);
+}
+
+void SymbolTable::startLoop(const string &loopCondStartLabel) {
+    this->nestedLoopDepth++;
+    this->loopCondStartLabelStack.push_back(loopCondStartLabel);
+    this->breakListStack.push_back(vector<AddressIndPair>());
+}
+
+void SymbolTable::endLoop(const AddressList &falseList) {
+    this->nestedLoopDepth--;
+
+    auto &buffer = CodeBuffer::instance();
+    string endLoopLabel = buffer.genLabel();
+    buffer.bpatch(this->breakListStack.back(), endLoopLabel);
+    buffer.bpatch(falseList, endLoopLabel);
+
+    this->breakListStack.pop_back();
+    this->loopCondStartLabelStack.pop_back();
+}
+
 shared_ptr<IdC> SymbolTable::getVarSymbol(const string &name) {
     auto symbol = this->symTbl[name];
 
