@@ -261,8 +261,8 @@ void emitAssign(shared_ptr<IdC> symbol, shared_ptr<ExpC> exp, string stackVariab
     Ralloc &ralloc = Ralloc::instance();
 
     string llvmType = typeNameToLlvmType(exp->getType());
-    string offsetReg = ralloc.getNextReg();
-    string idAddrReg = ralloc.getNextReg();
+    string offsetReg = ralloc.getNextReg("offsetEmitAssign");
+    string idAddrReg = ralloc.getNextReg("idAddrEmitAssign");
 
     codeBuffer.emit(offsetReg + " = " + std::to_string(symbol->getOffset()));
     codeBuffer.emit(idAddrReg + " = getelementptr i32, i32* " + stackVariablesPtrReg + ", i32 " + offsetReg);
