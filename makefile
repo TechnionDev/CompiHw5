@@ -13,4 +13,5 @@ zip:
 							tokens.*pp \
 							symbolTable.*pp \
 							bp.*pp \
-							hw3_output.*pp
+							hw3_output.*pp \
+							ralloc.*pp
