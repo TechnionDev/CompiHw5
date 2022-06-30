@@ -1,0 +1,11 @@
+int add(int c, int d) {
+    return c + d;
+}
+
+void main() {
+    byte a = 200b;
+    int b = 100;
+    int c = add(a, b);
+
+    printi(c);
+}
