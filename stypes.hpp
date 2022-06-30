@@ -95,7 +95,6 @@ class ExpC : public STypeC {
     AddressList boolTrueList;
     string expStartLabel;
 
-    string assureAndGetRegResultOfExpression();
 
    public:
     ExpC(const string &type, const string &reg);
@@ -104,7 +103,7 @@ class ExpC : public STypeC {
     bool isBool() const;
     bool isString() const;
     bool isByte() const;
-    string getRegisterOrImmediate() const;
+    string assureAndGetRegResultOfExpression();
 
     const AddressList &getFalseList() const;
     const AddressList &getTrueList() const;

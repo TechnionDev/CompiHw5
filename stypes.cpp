@@ -24,7 +24,7 @@ ExpC::ExpC(const string &type, const string &regOrImmStr) : STypeC(STExpression)
     if (type == "BOOL") {
         // Gen start label
         auto &buffer = CodeBuffer::instance();
-        this->expStartLabel = buffer.genLabel("ExpCBool");
+        this->expStartLabel = buffer.genLabel("ExpCBoolStart");
     }
 }
 
@@ -42,10 +42,6 @@ bool ExpC::isString() const {
 
 bool ExpC::isByte() const {
     return this->type == "BYTE";
-}
-
-string ExpC::getRegisterOrImmediate() const {
-    return this->registerOrImmediate;
 }
 
 const AddressList &ExpC::getFalseList() const {
@@ -392,7 +388,7 @@ shared_ptr<ExpC> ExpC::loadIdValue(shared_ptr<IdC> idSymbol, string stackVariabl
     string idAddrReg = ralloc.getNextReg();
     string expReg = ralloc.getNextReg();
 
-    codeBuffer.emit(offsetReg + " = " + std::to_string(idSymbol->getOffset()));
+    codeBuffer.emit(offsetReg + " = i32 " + std::to_string(idSymbol->getOffset()));
     codeBuffer.emit(idAddrReg + " = getelementptr i32, i32* " + stackVariablesPtrReg + ", i32 " + offsetReg);
     codeBuffer.emit(expReg + " = load " + llvmType + ", ptr " + idAddrReg);
 
@@ -513,6 +509,7 @@ void FuncIdC::endFuncIdScope() {
     codeBuffer.emit("ret " + defaultRetVal);
     // To balance rainbow brackets {
     codeBuffer.emit("}");
+    codeBuffer.emit("");
 }
 
 const string &FuncIdC::getType() const {

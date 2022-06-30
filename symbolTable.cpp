@@ -20,16 +20,19 @@ SymbolTable::SymbolTable() {
     buffer.emitGlobal("declare void @exit(i32)");
     buffer.emitGlobal("@.int_specifier = constant [4 x i8] c\"%d\\0A\\00\"");
     buffer.emitGlobal("@.str_specifier = constant [4 x i8] c\"%s\\0A\\00\"");
+    buffer.emitGlobal("");
     buffer.emitGlobal("define void @printi(i32) {");
     buffer.emitGlobal("\t%spec_ptr = getelementptr [4 x i8], [4 x i8]* @.int_specifier, i32 0, i32 0");
     buffer.emitGlobal("\tcall i32 (i8*, ...) @printf(i8* %spec_ptr, i32 %0)");
     buffer.emitGlobal("\tret void");
     buffer.emitGlobal("}");
+    buffer.emitGlobal("");
     buffer.emitGlobal("define void @print(i8*) {");
     buffer.emitGlobal("\t%spec_ptr = getelementptr [4 x i8], [4 x i8]* @.str_specifier, i32 0, i32 0");
     buffer.emitGlobal("\tcall i32 (i8*, ...) @printf(i8* %spec_ptr, i8* %0)");
     buffer.emitGlobal("\tret void");
     buffer.emitGlobal("}");
+    buffer.emitGlobal("");
 }
 
 SymbolTable::~SymbolTable() {}
@@ -263,5 +266,5 @@ void emitAssign(shared_ptr<IdC> symbol, shared_ptr<ExpC> exp, string stackVariab
 
     codeBuffer.emit(offsetReg + " = " + std::to_string(symbol->getOffset()));
     codeBuffer.emit(idAddrReg + " = getelementptr i32, i32* " + stackVariablesPtrReg + ", i32 " + offsetReg);
-    codeBuffer.emit("store " + llvmType + " " + exp->getRegisterOrImmediate() + ", ptr " + idAddrReg);
+    codeBuffer.emit("store " + llvmType + " " + exp->assureAndGetRegResultOfExpression() + ", ptr " + idAddrReg);
 }

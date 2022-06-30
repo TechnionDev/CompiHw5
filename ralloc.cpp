@@ -10,8 +10,8 @@ Ralloc &Ralloc::instance() {
 }
 
 // Get the next register
-string Ralloc::getNextReg() {
-    return "%" + std::to_string(nextReg++);
+string Ralloc::getNextReg(const string &prefix) {
+    return "%" + prefix + (prefix == "" ? "" : "_") + std::to_string(nextReg++);
 }
 
 string Ralloc::getNextVarName() {

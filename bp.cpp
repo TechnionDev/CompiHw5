@@ -4,6 +4,7 @@
 #include <sstream>
 #include <vector>
 
+#include "ralloc.hpp"
 #include "symbolTable.hpp"
 
 using namespace std;
@@ -27,6 +28,7 @@ string CodeBuffer::genLabel(const string& prefix) {
     label << buffer.size();
     std::string ret(label.str());
     label << ":";
+    emit("br label %" + ret);
     emit(label.str());
     return ret;
 }
