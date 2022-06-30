@@ -70,8 +70,6 @@ string ExpC::assureAndGetRegResultOfExpression() {
     auto &buffer = CodeBuffer::instance();
 
     // Create a new register for the result
-    string trueReg = ralloc.getNextReg();
-    string falseReg = ralloc.getNextReg();
     string resultReg = ralloc.getNextReg();
     AddressList resLabelsList;
 
@@ -390,7 +388,7 @@ shared_ptr<ExpC> ExpC::loadIdValue(shared_ptr<IdC> idSymbol, string stackVariabl
 
     codeBuffer.emit(offsetReg + " = i32 " + std::to_string(idSymbol->getOffset()));
     codeBuffer.emit(idAddrReg + " = getelementptr i32, i32* " + stackVariablesPtrReg + ", i32 " + offsetReg);
-    codeBuffer.emit(expReg + " = load " + llvmType + ", ptr " + idAddrReg);
+    codeBuffer.emit(expReg + " = load " + llvmType + ", " + llvmType + "* " + idAddrReg);
 
     shared_ptr<ExpC> idValue = NEW(ExpC, (idSymbol->getType(), expReg));
 

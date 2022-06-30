@@ -15,7 +15,7 @@ class Ralloc {
     // Get the singleton instance
     static Ralloc &instance();
     // Get the next available register
-    std::string getNextReg(const std::string &prefix = "");
+    std::string getNextReg(const std::string &prefix = "reg");
     // Get the next available variable name
     std::string getNextVarName();
 };
