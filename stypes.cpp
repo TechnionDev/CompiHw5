@@ -440,15 +440,18 @@ static vector<string> getTypesFromIds(const vector<shared_ptr<IdC>> &ids) {
     return types;
 }
 
-FuncIdC::FuncIdC(const string &name, const string &type, const vector<shared_ptr<IdC>> &formals) : IdC(name, "BAD_VIRTUAL_CALL"), argTypes(getTypesFromIds(formals)), retType(verifyRetTypeName(type)) {
+FuncIdC::FuncIdC(const string &name, const string &type, const vector<shared_ptr<IdC>> &formals) : IdC(name, "BAD_VIRTUAL_CALL"), argTypes(getTypesFromIds(formals)), mapFormalNameToReg(), retType(verifyRetTypeName(type)) {
     CodeBuffer &buffer = CodeBuffer::instance();
     Ralloc &ralloc = Ralloc::instance();
     string retTypeStr = typeNameToLlvmType(this->retType);
 
     string formalsStr = "";
+    string regName = "";
 
-    for (auto &argType : this->argTypes) {
-        formalsStr += typeNameToLlvmType(argType) + ", ";
+    for (auto &formal : formals) {
+        regName = typeNameToLlvmType(formal->getType());
+        formalsStr += regName + ", ";
+        this->mapFormalNameToReg[formal->getName()] = regName;
     }
 
     // Take substring without last comma

@@ -73,6 +73,7 @@ class IdC : public STypeC {
 
 class FuncIdC : public IdC {
     vector<string> argTypes;
+    map<string, string> mapFormalNameToReg;
     string retType;
 
    public:
