@@ -40,6 +40,7 @@ class SymbolTable {
     shared_ptr<IdC> getVarSymbol(const string &name);
     shared_ptr<FuncIdC> getFuncSymbol(const string &name, bool shouldError = true);
     void printSymbolTable();
+    int getCurrentScopeDepth() const;
 };
 
 void verifyMainExists(SymbolTable &symbolTable);

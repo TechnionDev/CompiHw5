@@ -77,7 +77,7 @@ class FuncIdC : public IdC {
     string retType;
 
    public:
-    FuncIdC(const string &name, const string &type, const vector<shared_ptr<IdC>> &formals);
+    FuncIdC(const string &name, const string &type, const vector<shared_ptr<IdC>> &formals, bool isPredefined = false);
     const vector<string> &getArgTypes() const;
     vector<string> &getArgTypes();
     const string &getType() const;
@@ -156,6 +156,9 @@ shared_ptr<STypeC> handleIfEnd(shared_ptr<STypeC> conditionStype, bool hasElse =
 void handleElseEnd(shared_ptr<STypeC> endIfListStype);
 void handleWhileStart(shared_ptr<STypeC> conditionStype);
 void handleWhileEnd(shared_ptr<STypeC> endIfListStype);
+// Retain last bool ExpC in a static variable for later use
+void saveBoolExpC(shared_ptr<STypeC> boolExpStype);
+shared_ptr<ExpC> getLastBoolExpC();
 
 #define YYSTYPE STypePtr
 #define NEW(x, y) (std::shared_ptr<x>(new x y))

@@ -18,7 +18,7 @@ VarTypeNameC::VarTypeNameC(const string &type) : RetTypeNameC(verifyVarTypeName(
 
 ExpC::ExpC(const string &type, const string &regOrImmStr) : STypeC(STExpression), type(verifyValTypeName(type)), registerOrImmediate(regOrImmStr) {
     // TODO: Handle strings
-    if (regOrImmStr[0] != '%' and (type == "INT" or type == "BYTE") and stoi(regOrImmStr) > 255) {
+    if (regOrImmStr[0] != '%' and type == "BYTE" and stoi(regOrImmStr) > 255) {
         errorByteTooLarge(yylineno, regOrImmStr);
     }
     if (type == "BOOL") {
@@ -427,7 +427,8 @@ void IdC::setRegisterName(string registerName) {
     this->registerName = registerName;
 }
 
-CallC::CallC(const string &type, const string &symbol) : STypeC(STCall), type(verifyRetTypeName(type)), symbol(symbol) {}
+CallC::CallC(const string &type, const string &symbol)
+    : STypeC(STCall), type(verifyRetTypeName(type)), symbol(symbol) {}
 
 // Convert vector<shared_ptr<IdC>> to vector<string> of just the types
 static vector<string> getTypesFromIds(const vector<shared_ptr<IdC>> &ids) {
@@ -440,7 +441,11 @@ static vector<string> getTypesFromIds(const vector<shared_ptr<IdC>> &ids) {
     return types;
 }
 
-FuncIdC::FuncIdC(const string &name, const string &type, const vector<shared_ptr<IdC>> &formals) : IdC(name, "BAD_VIRTUAL_CALL"), argTypes(getTypesFromIds(formals)), mapFormalNameToReg(), retType(verifyRetTypeName(type)) {
+FuncIdC::FuncIdC(const string &name, const string &type, const vector<shared_ptr<IdC>> &formals, bool isPredefined)
+    : IdC(name, "BAD_VIRTUAL_CALL"),
+      argTypes(getTypesFromIds(formals)),
+      mapFormalNameToReg(),
+      retType(verifyRetTypeName(type)) {
     CodeBuffer &buffer = CodeBuffer::instance();
     Ralloc &ralloc = Ralloc::instance();
     string retTypeStr = typeNameToLlvmType(this->retType);
@@ -460,11 +465,13 @@ FuncIdC::FuncIdC(const string &name, const string &type, const vector<shared_ptr
         formalsStr.pop_back();
     }
 
-    buffer.emit("define " + type + " " + retTypeStr + "@" + name + "(" + formalsStr.substr() + ") {");
+    if (isPredefined) return;
+
+    buffer.emit("define " + retTypeStr + " @" + name + "(" + formalsStr.substr() + ") {");
     // I need to fix the hilighting of rainbow brackets so: }
     // Allocate space for 50 variables on the stack
     symbolTable.stackVariablesPtrReg = ralloc.getNextReg();
-    buffer.emit(symbolTable.stackVariablesPtrReg + " = alloca i32, 50");
+    buffer.emit("\t" + symbolTable.stackVariablesPtrReg + " = alloca i32, i8 50");
 }
 
 shared_ptr<FuncIdC> FuncIdC::startFuncIdWithScope(const string &name, shared_ptr<RetTypeNameC> type, const vector<shared_ptr<IdC>> &formals) {
@@ -485,7 +492,7 @@ void FuncIdC::endFuncIdScope() {
     string defaultRetVal = retTypeLlvm + (retTypeLlvm == "void" ? "" : " 0");
     symbolTable.retType = nullptr;
     auto &codeBuffer = CodeBuffer::instance();
-    codeBuffer.emit("ret" + defaultRetVal);
+    codeBuffer.emit("ret " + defaultRetVal);
     // To balance rainbow brackets {
     codeBuffer.emit("}");
 }
@@ -591,6 +598,25 @@ const string &verifyVarTypeName(const string &type) {
     // Never reaches here because errorMismatch exits
     return type;
 }
+
+static shared_ptr<ExpC> lastBoolExpC = nullptr;
+
+void saveBoolExpC(shared_ptr<STypeC> boolExpStype) {
+    verifyBoolType(boolExpStype);
+    auto exp = DC(ExpC, boolExpStype);
+
+    assert(exp->isBool());
+
+    lastBoolExpC = exp;
+}
+
+shared_ptr<ExpC> getLastBoolExpC() {
+    auto boolExp = lastBoolExpC;
+    lastBoolExpC = nullptr;
+    return boolExp;
+}
+
+// Handle if/loops open/close
 
 void handleIfStart(shared_ptr<STypeC> conditionStype) {
     verifyBoolType(conditionStype);

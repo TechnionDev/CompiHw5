@@ -11,24 +11,24 @@ SymbolTable::SymbolTable() {
     this->nestedLoopDepth = 0;
     this->currOffset = 0;
     this->addScope();
-    this->addSymbol(NEW(FuncIdC, ("print", "VOID", vector<shared_ptr<IdC>>({NEW(IdC, ("msg", "STRING"))}))));
-    this->addSymbol(NEW(FuncIdC, ("printi", "VOID", vector<shared_ptr<IdC>>({NEW(IdC, ("i", "INT"))}))));
+    this->addSymbol(NEW(FuncIdC, ("print", "VOID", vector<shared_ptr<IdC>>({NEW(IdC, ("msg", "STRING"))}), true)));
+    this->addSymbol(NEW(FuncIdC, ("printi", "VOID", vector<shared_ptr<IdC>>({NEW(IdC, ("i", "INT"))}), true)));
     // Emit print functions' implementation
     auto &buffer = CodeBuffer::instance();
-    buffer.emit("declare i32 @printf(i8*, ...)");
-    buffer.emit("declare void @exit(i32)");
-    buffer.emit("@.int_specifier = constant [4 x i8] c\"%d\0A\00\"");
-    buffer.emit("@.str_specifier = constant [4 x i8] c\"%s\0A\00\"");
-    buffer.emit("define void @printi(i32) {");
-    buffer.emit("%spec_ptr = getelementptr [4 x i8], [4 x i8]* @.int_specifier, i32 0, i32 0");
-    buffer.emit("call i32 (i8*, ...) @printf(i8* %spec_ptr, i32 %0)");
-    buffer.emit("ret void");
-    buffer.emit("}");
-    buffer.emit("define void @print(i8*) {");
-    buffer.emit("%spec_ptr = getelementptr [4 x i8], [4 x i8]* @.str_specifier, i32 0, i32 0");
-    buffer.emit("call i32 (i8*, ...) @printf(i8* %spec_ptr, i8* %0)");
-    buffer.emit("ret void");
-    buffer.emit("}");
+    buffer.emitGlobal("declare i32 @printf(i8*, ...)");
+    buffer.emitGlobal("declare void @exit(i32)");
+    buffer.emitGlobal("@.int_specifier = constant [4 x i8] c\"%d\\0A\\00\"");
+    buffer.emitGlobal("@.str_specifier = constant [4 x i8] c\"%s\\0A\\00\"");
+    buffer.emitGlobal("define void @printi(i32) {");
+    buffer.emitGlobal("\t%spec_ptr = getelementptr [4 x i8], [4 x i8]* @.int_specifier, i32 0, i32 0");
+    buffer.emitGlobal("\tcall i32 (i8*, ...) @printf(i8* %spec_ptr, i32 %0)");
+    buffer.emitGlobal("\tret void");
+    buffer.emitGlobal("}");
+    buffer.emitGlobal("define void @print(i8*) {");
+    buffer.emitGlobal("\t%spec_ptr = getelementptr [4 x i8], [4 x i8]* @.str_specifier, i32 0, i32 0");
+    buffer.emitGlobal("\tcall i32 (i8*, ...) @printf(i8* %spec_ptr, i8* %0)");
+    buffer.emitGlobal("\tret void");
+    buffer.emitGlobal("}");
 }
 
 SymbolTable::~SymbolTable() {}
@@ -179,6 +179,10 @@ void SymbolTable::printSymbolTable() {
     for (auto it = this->symTbl.begin(); it != this->symTbl.end(); ++it) {
         printID(it->first, offset++, it->second->getType());
     }
+}
+
+int SymbolTable::getCurrentScopeDepth() const {
+    return this->scopeSymbols.size() - 1;
 }
 
 // Helper functions

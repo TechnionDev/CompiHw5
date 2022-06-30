@@ -1,7 +1,7 @@
 #include "ralloc.hpp"
 using std::string;
 
-Ralloc::Ralloc() : nextReg(0) {}
+Ralloc::Ralloc() : nextReg(1) {}
 
 // Get the singleton object instance
 Ralloc &Ralloc::instance() {
