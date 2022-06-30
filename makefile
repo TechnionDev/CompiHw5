@@ -14,5 +14,4 @@ zip:
 							symbolTable.*pp \
 							bp.*pp \
 							hw3_output.*pp \
-							MakeFile \
 							ralloc.*pp
