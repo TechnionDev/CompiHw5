@@ -106,16 +106,8 @@ Statement:      LBRACE OpenScope Statements RBRACE CloseScope
                 | IF LPAREN BoolExp RPAREN OpenScope IfStart Statement CloseScope %prec IF { handleIfEnd($3); }
                 | IF LPAREN BoolExp RPAREN OpenScope IfStart Statement CloseScope ELSE { $$ = handleIfEnd($3, true); } OpenScope  Statement CloseScope { handleElseEnd($10); }
                 | WHILE LPAREN BoolExp RPAREN { handleWhileStart($3); } OpenScope Statement CloseScope %prec WHILE { handleWhileEnd($3); }
-                | BREAK SC                          {
-                                                        if (symbolTable.nestedLoopDepth == 0) {
-                                                            errorUnexpectedBreak(yylineno);
-                                                        }
-                                                    }
-                | CONTINUE SC                       {
-                                                        if (symbolTable.nestedLoopDepth == 0) {
-                                                            errorUnexpectedContinue(yylineno);
-                                                        }
-                                                    }
+                | BREAK SC                          { symbolTable.addBreak(); }
+                | CONTINUE SC                       { symbolTable.addContinue(); }
                 ;
 IfStart:        /* epsilon */ %empty                { $$ = getLastBoolExpC(); handleIfStart($$); }
                 ;

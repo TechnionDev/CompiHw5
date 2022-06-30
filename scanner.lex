@@ -33,9 +33,9 @@ escapechars     ([\\"nrt0])
 (b)                                 return B;
 (bool)                              return BOOL;
 (auto)                              return AUTO;
-(and)                               return AND;
-(or)                                return OR;
-(not)                               return NOT;
+(and)                               {printf("; DEBUG: token AND\n"); return AND;}
+(or)                                {printf("; DEBUG: token OR\n"); return OR;}
+(not)                               {printf("; DEBUG: token NOT\n"); return NOT;}
 (true)                              return TRUE;
 (false)                             return FALSE;
 (return)                            return RETURN;

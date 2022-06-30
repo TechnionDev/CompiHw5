@@ -20,6 +20,7 @@ SymbolTable::SymbolTable() {
     buffer.emitGlobal("declare void @exit(i32)");
     buffer.emitGlobal("@.int_specifier = constant [4 x i8] c\"%d\\0A\\00\"");
     buffer.emitGlobal("@.str_specifier = constant [4 x i8] c\"%s\\0A\\00\"");
+    buffer.emitGlobal("@.error_div_zero_msg = constant [23 x i8] c\"Error division by zero\\00\"");
     buffer.emitGlobal("");
     buffer.emitGlobal("define void @printi(i32) {");
     buffer.emitGlobal("\t%spec_ptr = getelementptr [4 x i8], [4 x i8]* @.int_specifier, i32 0, i32 0");
@@ -30,6 +31,13 @@ SymbolTable::SymbolTable() {
     buffer.emitGlobal("define void @print(i8*) {");
     buffer.emitGlobal("\t%spec_ptr = getelementptr [4 x i8], [4 x i8]* @.str_specifier, i32 0, i32 0");
     buffer.emitGlobal("\tcall i32 (i8*, ...) @printf(i8* %spec_ptr, i8* %0)");
+    buffer.emitGlobal("\tret void");
+    buffer.emitGlobal("}");
+    buffer.emitGlobal("");
+    buffer.emitGlobal("define void @error_division_by_zero() {");
+    buffer.emitGlobal("\t%spec_ptr = getelementptr [23 x i8], [23 x i8]* @.error_div_zero_msg, i32 0, i32 0");
+    buffer.emitGlobal("\tcall void (i8*) @print(i8* %spec_ptr)");
+    buffer.emitGlobal("\tcall void (i32) @exit(i32 0)");
     buffer.emitGlobal("\tret void");
     buffer.emitGlobal("}");
     buffer.emitGlobal("");
@@ -47,7 +55,7 @@ void SymbolTable::addScope(int funcArgCount) {
 }
 
 void SymbolTable::removeScope() {
-    endScope();
+    // endScope();
 
     string funcTypeStr;
     shared_ptr<FuncIdC> funcId;
@@ -126,11 +134,17 @@ void SymbolTable::addSymbol(shared_ptr<IdC> type) {
 }
 
 void SymbolTable::addContinue() {
+    if (this->nestedLoopDepth == 0) {
+        errorUnexpectedContinue(yylineno);
+    }
     auto &buffer = CodeBuffer::instance();
     buffer.emit("br label %" + this->loopCondStartLabelStack.back());
 }
 
 void SymbolTable::addBreak() {
+    if (this->nestedLoopDepth == 0) {
+        errorUnexpectedBreak(yylineno);
+    }
     auto &buffer = CodeBuffer::instance();
     AddressIndPair instruction = make_pair(buffer.emit("br label @"), FIRST);
     this->breakListStack.back().push_back(instruction);
@@ -265,7 +279,6 @@ void emitAssign(shared_ptr<IdC> symbol, shared_ptr<ExpC> exp, string stackVariab
     string idAddrReg = ralloc.getNextReg("idAddrEmitAssign");
     string expReg = exp->assureAndGetRegResultOfExpression();
 
-
     codeBuffer.emit(offsetReg + " = add i32 0, " + std::to_string(symbol->getOffset()));
     codeBuffer.emit(idAddrReg + " = getelementptr i32, i32* " + stackVariablesPtrReg + ", i32 " + offsetReg);
 
@@ -307,7 +320,7 @@ void emitReturn(shared_ptr<RetTypeNameC> retType, shared_ptr<ExpC> exp) {
     if (retType->getTypeName() != exp->getType()) {
         throw "this should be impossible. wrong function usage.";
     }
-    
+
     string llvmType = typeNameToLlvmType(exp->getType());
     string code = "ret " + llvmType;
 

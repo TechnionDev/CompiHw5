@@ -17,7 +17,6 @@ RetTypeNameC::RetTypeNameC(const string &type) : STypeC(STRetType), type(verifyR
 VarTypeNameC::VarTypeNameC(const string &type) : RetTypeNameC(verifyVarTypeName(type)) {}
 
 ExpC::ExpC(const string &type, const string &regOrImmStr) : STypeC(STExpression), type(verifyValTypeName(type)), registerOrImmediate(regOrImmStr) {
-    // TODO: Handle strings| todo: maybe remove this todo line
     if (regOrImmStr[0] != '%' and type == "BYTE" and stoi(regOrImmStr) > 255) {
         errorByteTooLarge(yylineno, regOrImmStr);
     }
@@ -120,11 +119,11 @@ shared_ptr<ExpC> ExpC::getBinOpResult(shared_ptr<STypeC> stype1, shared_ptr<STyp
     }
     if (exp1->isInt() or exp2->isInt()) {
         if (exp1->isByte()) {
-            string resultReg = ralloc.getNextReg();
+            string resultReg = ralloc.getNextReg("binOpResExp1");
             codeBuffer.emit(resultReg + " = zext i8 " + exp1Reg + " to i32");
             exp1Reg = resultReg;
         } else if (exp2->isByte()) {
-            string resultReg = ralloc.getNextReg();
+            string resultReg = ralloc.getNextReg("binOpResExp1");
             codeBuffer.emit(resultReg + " = zext i8 " + exp2Reg + " to i32");
             exp2Reg = resultReg;
         }
@@ -138,6 +137,11 @@ shared_ptr<ExpC> ExpC::getBinOpResult(shared_ptr<STypeC> stype1, shared_ptr<STyp
         divOp = "udiv";
     }
 
+    int instAddr, instAddr2;
+    string ifShouldErrorDivBy0;
+    string labelDivBy0;
+    string labelNotDivBy0;
+
     // Emit the llvm ir code
     switch (op) {
         case ADDOP:
@@ -150,9 +154,16 @@ shared_ptr<ExpC> ExpC::getBinOpResult(shared_ptr<STypeC> stype1, shared_ptr<STyp
             opStr = "mul";
             break;
         case DIVOP:
-            // TODO: Implement div by 0 error checking and handling
-            // todo: define global string "Error division by zero"
-            // todo: emit llvm code to dynamically check exp2 value == 0
+            ifShouldErrorDivBy0 = ralloc.getNextReg("divBy0icmp");
+
+            codeBuffer.emit(ifShouldErrorDivBy0 + " = icmp eq " + typeNameToLlvmType(exp2->getType()) + " " + exp2->assureAndGetRegResultOfExpression() + ", 0");
+            instAddr = codeBuffer.emit("br i1 " + ifShouldErrorDivBy0 + ", label @, label @");
+            labelDivBy0 = codeBuffer.genLabel("labelDivBy0");
+            codeBuffer.emit("call void @error_division_by_zero()");
+            labelNotDivBy0 = codeBuffer.genLabel("labelNotDivBy0");
+
+            codeBuffer.bpatch(codeBuffer.makelist(make_pair(instAddr, FIRST)), labelDivBy0);
+            codeBuffer.bpatch(codeBuffer.makelist(make_pair(instAddr, SECOND)), labelNotDivBy0);
             opStr = divOp;
             break;
         default:
@@ -181,7 +192,7 @@ shared_ptr<ExpC> ExpC::evalBool(shared_ptr<STypeC> stype1, shared_ptr<STypeC> st
         throw "evalBool must get _Nonnull as first param and the second is _Nullable iff op == NOT";
     }
 
-    if (not exp1->isBool() or not exp2->isBool()) {
+    if (not exp1->isBool() or ((op != NOT) and not exp2->isBool())) {
         errorMismatch(yylineno);
     }
     int instAddr;
@@ -204,19 +215,18 @@ shared_ptr<ExpC> ExpC::evalBool(shared_ptr<STypeC> stype1, shared_ptr<STypeC> st
         exp1FirstList = exp1->boolTrueList;
         exp1SecondList = exp1->boolFalseList;
     } else {
-        exp1StartLabel = codeBuffer.genLabel("evalBoolExp1Start");
+        exp1StartLabel = exp1->expStartLabel;
         instAddr = codeBuffer.emit("br i1 " + exp1->registerOrImmediate + ", label @, label @");
         exp1FirstList = CodeBuffer::makelist(make_pair(instAddr, FIRST));
         exp1SecondList = CodeBuffer::makelist(make_pair(instAddr, SECOND));
     }
 
     if (exp2) {
+        exp2StartLabel = exp2->expStartLabel;
         if (exp2->registerOrImmediate == "") {
-            exp2StartLabel = exp2->expStartLabel;
             exp2FirstList = exp2->boolTrueList;
             exp2SecondList = exp2->boolFalseList;
         } else {
-            exp2StartLabel = codeBuffer.genLabel("evalBoolExp2Start");
             instAddr = codeBuffer.emit("br i1 " + exp2->registerOrImmediate + ", label @, label @");
             exp2FirstList = CodeBuffer::makelist(make_pair(instAddr, FIRST));
             exp2SecondList = CodeBuffer::makelist(make_pair(instAddr, SECOND));
@@ -280,6 +290,9 @@ shared_ptr<ExpC> ExpC::getCmpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC
 
     Ralloc &ralloc = Ralloc::instance();
     CodeBuffer &codeBuffer = CodeBuffer::instance();
+    string resultReg = ralloc.getNextReg("cmpOpRes");
+
+    shared_ptr<ExpC> resultExp = NEW(ExpC, ("BOOL", resultReg));
 
     string exp1RegOrImm = exp1->assureAndGetRegResultOfExpression();
     string exp2RegOrImm = exp2->assureAndGetRegResultOfExpression();
@@ -287,10 +300,10 @@ shared_ptr<ExpC> ExpC::getCmpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC
     if (exp1->isInt() or exp2->isInt()) {
         regSizeofDecorator = " i32 ";
         if (exp1->isByte() and exp1RegOrImm[0] == '%') {
-            exp1RegOrImm = ralloc.getNextReg("getCmpOpRegOrImm");
+            exp1RegOrImm = ralloc.getNextReg("cmpOpRegOrImm");
             codeBuffer.emit(exp1RegOrImm + " = zext i8 to i32 " + exp1RegOrImm[0]);
         } else if (exp2->isByte() and exp2RegOrImm[0] == '%') {
-            exp2RegOrImm = ralloc.getNextReg("getCmpOpRegOrImm");
+            exp2RegOrImm = ralloc.getNextReg("cmpOpRegOrImm");
             codeBuffer.emit(exp2RegOrImm + " = zext i8 to i32 " + exp2RegOrImm[0]);
         }
     } else {
@@ -320,9 +333,8 @@ shared_ptr<ExpC> ExpC::getCmpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC
             throw "Unsupported operation to getCmpResult";
     }
 
-    string resultReg = ralloc.getNextReg("getCmpOpResult");
-    codeBuffer.emit(resultReg + " = icmp " + cmpOpStr + regSizeofDecorator + exp1RegOrImm);
-    return NEW(ExpC, ("BOOL", resultReg));
+    codeBuffer.emit(resultReg + " = icmp " + cmpOpStr + regSizeofDecorator + exp1RegOrImm + ", " + exp2RegOrImm);
+    return resultExp;
 }
 
 shared_ptr<ExpC> ExpC::getCastResult(shared_ptr<STypeC> dstStype, shared_ptr<STypeC> expStype) {
@@ -349,7 +361,7 @@ shared_ptr<ExpC> ExpC::getCastResult(shared_ptr<STypeC> dstStype, shared_ptr<STy
 
     Ralloc &ralloc = Ralloc::instance();
     CodeBuffer &codeBuffer = CodeBuffer::instance();
-    string resultReg = ralloc.getNextReg("getCastResult");
+    string resultReg = ralloc.getNextReg("castRes");
 
     if (exp->isInt() and dstType->getTypeName() == "BYTE") {
         codeBuffer.emit(resultReg + " = trunc i32 " + exp->assureAndGetRegResultOfExpression() + " to i8");
@@ -358,6 +370,7 @@ shared_ptr<ExpC> ExpC::getCastResult(shared_ptr<STypeC> dstStype, shared_ptr<STy
     } else {
         codeBuffer.emit(resultReg + " = add " + typeNameToLlvmType(exp->getType()) + " " + exp->assureAndGetRegResultOfExpression() + ", 0");
     }
+    codeBuffer.emit("; DEBUG: got cast result (" + dstType->getTypeName() + ") from " + exp->getType());
     return NEW(ExpC, (dstType->getTypeName(), resultReg));
 }
 
@@ -366,7 +379,7 @@ shared_ptr<ExpC> ExpC::getCallResult(shared_ptr<FuncIdC> funcId, shared_ptr<STyp
     auto &ralloc = Ralloc::instance();
     auto &buffer = CodeBuffer::instance();
     string llvmRetType = typeNameToLlvmType(funcId->getType());
-    string resultReg = ralloc.getNextReg("getCallResult");
+    string resultReg = ralloc.getNextReg("callRes_" + funcId->getName());
     string resultAssignment = llvmRetType == "void" ? "" : (resultReg + " = ");
     string expListStr = "";
     auto &formalsTypes = funcId->getArgTypes();
@@ -388,14 +401,14 @@ shared_ptr<ExpC> ExpC::getCallResult(shared_ptr<FuncIdC> funcId, shared_ptr<STyp
         expListStr.pop_back();
     }
 
-    buffer.emit(resultAssignment + "call " + llvmRetType + " @" + funcId->getName() + "(" + expListStr + ")");
+    shared_ptr<ExpC> resultExp = nullptr;
 
     // This is valid as long as it doesn't derive from the Exp rule
-    if (llvmRetType == "void") {
-        return nullptr;
+    if (funcId->getType() != "VOID") {
+        resultExp = NEW(ExpC, (funcId->getType(), resultReg));
     }
 
-    shared_ptr<ExpC> resultExp = NEW(ExpC, (funcId->getType(), resultReg));
+    buffer.emit(resultAssignment + "call " + llvmRetType + " @" + funcId->getName() + "(" + expListStr + ")");
 
     return resultExp;
 }
@@ -411,7 +424,7 @@ shared_ptr<ExpC> ExpC::loadIdValue(shared_ptr<IdC> idSymbol, string stackVariabl
     string llvmType = typeNameToLlvmType(idSymbol->getType());
     string offsetReg = ralloc.getNextReg("loadIdOffset");
     string idAddrReg = ralloc.getNextReg("loadIdIdAddr");
-    string expReg = ralloc.getNextReg("loadIdExp");
+    string expReg = ralloc.getNextReg("idVal_" + idSymbol->getName());
 
     codeBuffer.emit(offsetReg + " = add i32 0, " + std::to_string(idSymbol->getOffset()));
     codeBuffer.emit(idAddrReg + " = getelementptr i32, i32* " + stackVariablesPtrReg + ", i32 " + offsetReg);

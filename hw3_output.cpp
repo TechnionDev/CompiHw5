@@ -15,7 +15,7 @@ void output::endScope() {
 }
 
 void output::printID(const string& id, int offset, const string& type) {
-    cout << DEBUG_PREFIX << id << " " << type << " " << offset << endl;
+    // cout << DEBUG_PREFIX << id << " " << type << " " << offset << endl;
 }
 
 string typeListToString(const std::vector<string>& argTypes) {
