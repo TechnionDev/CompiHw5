@@ -6,14 +6,16 @@
 #include <iostream>
 #include <sstream>
 
+#define DEBUG_PREFIX "; DEBUG: "
+
 using namespace std;
 
 void output::endScope() {
-    cout << "---end scope---" << endl;
+    cout << DEBUG_PREFIX " ---end scope---" << endl;
 }
 
 void output::printID(const string& id, int offset, const string& type) {
-    cout << id << " " << type << " " << offset << endl;
+    cout << DEBUG_PREFIX << id << " " << type << " " << offset << endl;
 }
 
 string typeListToString(const std::vector<string>& argTypes) {
