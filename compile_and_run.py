@@ -69,7 +69,7 @@ for root, _, _ in os.walk(f"{MAIN_TESTS_FOLDER}"):
         llvm_file = open(llvm_filename)
         fanC_out_file = open(fanC_out_filename, 'w')
 
-        llvm_process = subprocess.Popen("lli", stdin=llvm_file, stdout=fanC_out_file, stderr=subprocess.PIPE)
+        llvm_process = subprocess.Popen("/opt/homebrew/opt/llvm/bin/lli", stdin=llvm_file, stdout=fanC_out_file, stderr=subprocess.PIPE)
         _, llvm_stderr = llvm_process.communicate()
 
         llvm_file.close()

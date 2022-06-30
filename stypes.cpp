@@ -404,6 +404,10 @@ shared_ptr<ExpC> ExpC::loadIdValue(shared_ptr<IdC> idSymbol, string stackVariabl
     CodeBuffer &codeBuffer = CodeBuffer::instance();
     Ralloc &ralloc = Ralloc::instance();
 
+    if (idSymbol->getRegisterName() != "") {
+        return NEW(ExpC, (idSymbol->getType(), idSymbol->getRegisterName()));
+    }
+
     string llvmType = typeNameToLlvmType(idSymbol->getType());
     string offsetReg = ralloc.getNextReg("loadIdOffset");
     string idAddrReg = ralloc.getNextReg("loadIdIdAddr");
@@ -411,8 +415,12 @@ shared_ptr<ExpC> ExpC::loadIdValue(shared_ptr<IdC> idSymbol, string stackVariabl
 
     codeBuffer.emit(offsetReg + " = add i32 0, " + std::to_string(idSymbol->getOffset()));
     codeBuffer.emit(idAddrReg + " = getelementptr i32, i32* " + stackVariablesPtrReg + ", i32 " + offsetReg);
-    string idAddrRegCorrectSize = ralloc.getNextReg("loadIdIdAddrCorrectSize");
-    codeBuffer.emit(idAddrRegCorrectSize + " = bitcast i32* " + idAddrReg + " to " + llvmType + "*");
+    string idAddrRegCorrectSize = idAddrReg;
+
+    if (llvmType != "i32") {
+        idAddrRegCorrectSize = ralloc.getNextReg("idAddrCorrect");
+        codeBuffer.emit(idAddrRegCorrectSize + " = bitcast i32* " + idAddrReg + " to " + llvmType + "*");
+    }
 
     codeBuffer.emit(expReg + " = load " + llvmType + ", " + llvmType + "* " + idAddrRegCorrectSize);
 
@@ -494,9 +502,10 @@ FuncIdC::FuncIdC(const string &name, const string &type, const vector<shared_ptr
     string regName = "";
 
     for (auto &formal : formals) {
-        regName = typeNameToLlvmType(formal->getType());
-        formalsStr += regName + ", ";
+        regName = ralloc.getNextReg("formal_" + formal->getName());
+        formalsStr += typeNameToLlvmType(formal->getType()) + " " + regName + ", ";
         this->mapFormalNameToReg[formal->getName()] = regName;
+        formal->setRegisterName(regName);
     }
 
     // Take substring without last comma
@@ -511,7 +520,7 @@ FuncIdC::FuncIdC(const string &name, const string &type, const vector<shared_ptr
     // I need to fix the hilighting of rainbow brackets so: }
     // Allocate space for 50 variables on the stack
     symbolTable.stackVariablesPtrReg = ralloc.getNextReg("FuncIdCStackVarPtrReg");
-    buffer.emit("\t" + symbolTable.stackVariablesPtrReg + " = alloca i32, i8 50");
+    buffer.emit("\t" + symbolTable.stackVariablesPtrReg + " = alloca i32, i32 50");
 }
 
 shared_ptr<FuncIdC> FuncIdC::startFuncIdWithScope(const string &name, shared_ptr<RetTypeNameC> type, const vector<shared_ptr<IdC>> &formals) {

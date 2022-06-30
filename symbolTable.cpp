@@ -265,12 +265,16 @@ void emitAssign(shared_ptr<IdC> symbol, shared_ptr<ExpC> exp, string stackVariab
     string idAddrReg = ralloc.getNextReg("idAddrEmitAssign");
     string expReg = exp->assureAndGetRegResultOfExpression();
 
-    string idAddrRegCorrectSize = ralloc.getNextReg("idAddrCorrect_" + symbol->getName());
 
     codeBuffer.emit(offsetReg + " = add i32 0, " + std::to_string(symbol->getOffset()));
     codeBuffer.emit(idAddrReg + " = getelementptr i32, i32* " + stackVariablesPtrReg + ", i32 " + offsetReg);
 
-    codeBuffer.emit(idAddrRegCorrectSize + " = bitcast i32* " + idAddrReg + " to " + llvmType + "*");
+    string idAddrRegCorrectSize = idAddrReg;
+
+    if (llvmType != "i32") {
+        idAddrRegCorrectSize = ralloc.getNextReg("idAddrCorrect");
+        codeBuffer.emit(idAddrRegCorrectSize + " = bitcast i32* " + idAddrReg + " to " + llvmType + "*");
+    }
 
     codeBuffer.emit("store " + llvmType + " " + expReg + ", " + llvmType + "* " + idAddrRegCorrectSize);
 }
