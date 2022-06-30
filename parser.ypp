@@ -70,10 +70,13 @@ SymbolTable symbolTable;
 /* Rules */
 Program:        Funcs                               {}
                 ;
-Funcs:          /* epsilon */ %empty %prec SECOND_PRIOR    {}
-                | FuncDecl Funcs %prec FIRST_PRIOR  {};
-FuncDecl:       RetType ID LPAREN Formals           { vector<shared_ptr<IdC> > vec = STYPE2STD(vector<shared_ptr<IdC> >, $4);
-                                                      FuncIdC::startFuncIdWithScope(STYPE2STD(string, $2), DC(RetTypeNameC, $1), vec); }
+Funcs:          /* epsilon */ %empty %prec SECOND_PRIOR {}
+                | FuncDecl Funcs %prec FIRST_PRIOR  {}
+                ;
+FuncDecl:       RetType ID LPAREN Formals           {
+                                                        vector<shared_ptr<IdC> > vec = STYPE2STD(vector<shared_ptr<IdC> >, $4);
+                                                        FuncIdC::startFuncIdWithScope(STYPE2STD(string, $2), DC(RetTypeNameC, $1), vec);
+                                                    }
                     RPAREN LBRACE Statements RBRACE { FuncIdC::endFuncIdScope(); }
                 ;
 RetType:        Type                                { $$ = $1; }
@@ -122,11 +125,9 @@ Statement:      LBRACE OpenScope Statements RBRACE CloseScope
                                                             errorMismatch(yylineno);
                                                         }
                                                     }
-                | IF LPAREN BoolExp RPAREN OpenScope { handleIfStart($3); }
-                        Statement CloseScope %prec IF { handleIfEnd($3); }
-                | IF LPAREN BoolExp RPAREN OpenScope { handleIfStart($3); } Statement CloseScope
-                        ELSE OpenScope { $$ = handleIfEnd($3, true); } Statement CloseScope { handleElseEnd($11); }
-                | WHILE LPAREN BoolExp RPAREN { handleWhileStart($3); } OpenScope Statement CloseScope { handleWhileEnd($3); }
+                | IF LPAREN BoolExp RPAREN OpenScope IfStart Statement CloseScope %prec IF { handleIfEnd($3); }
+                | IF LPAREN BoolExp RPAREN OpenScope IfStart Statement CloseScope ELSE { $$ = handleIfEnd($3, true); } OpenScope  Statement CloseScope { handleElseEnd($10); }
+                | WHILE LPAREN BoolExp RPAREN { handleWhileStart($3); } OpenScope Statement CloseScope %prec WHILE { handleWhileEnd($3); }
                 | BREAK SC                          {
                                                         if (symbolTable.nestedLoopDepth == 0) {
                                                             errorUnexpectedBreak(yylineno);
@@ -137,6 +138,8 @@ Statement:      LBRACE OpenScope Statements RBRACE CloseScope
                                                             errorUnexpectedContinue(yylineno);
                                                         }
                                                     }
+                ;
+IfStart:        /* epsilon */ %empty                { $$ = getLastBoolExpC(); handleIfStart($$); }
                 ;
 TypeDecl:       Type ID                             { $$ = NEW(IdC, (STYPE2STD(string, $2), DC(VarTypeNameC, $1)->getTypeName())); }
                 ;
@@ -156,7 +159,7 @@ Type:           INT                                 { $$ = NEW(VarTypeNameC, ("I
                 | BYTE                              { $$ = NEW(VarTypeNameC, ("BYTE")); }
                 | BOOL                              { $$ = NEW(VarTypeNameC, ("BOOL")); }
                 ;
-BoolExp:        Exp                                 { verifyBoolType($1); $$ = $1; }
+BoolExp:        Exp                                 { $$ = $1; saveBoolExpC($1); }
 Exp:            LPAREN Exp RPAREN                   { $$ = $2; }
                 | Exp ADDOP Exp                     { $$ = ExpC::getBinOpResult($1, $3, ADDOP); }
                 | Exp SUBOP Exp                     { $$ = ExpC::getBinOpResult($1, $3, SUBOP); }
@@ -186,6 +189,9 @@ Exp:            LPAREN Exp RPAREN                   { $$ = $2; }
 /* User routines */
 int main() {
     yyparse();
+    auto &buffer = CodeBuffer::instance();
+    buffer.printGlobalBuffer();
+    buffer.printCodeBuffer();
     verifyMainExists(symbolTable);
     return 0;
 }
