@@ -17,9 +17,13 @@ CodeBuffer& CodeBuffer::instance() {
     return inst;
 }
 
-string CodeBuffer::genLabel() {
+string CodeBuffer::genLabel(const string& prefix) {
     std::stringstream label;
-    label << "label_";
+    if (prefix != "") {
+        label << prefix << "_label_";
+    } else {
+        label << "label_";
+    }
     label << buffer.size();
     std::string ret(label.str());
     label << ":";
@@ -30,8 +34,8 @@ string CodeBuffer::genLabel() {
 extern SymbolTable symbolTable;
 
 int CodeBuffer::emit(const string& s) {
-	int indentationDepth = symbolTable.getCurrentScopeDepth();
-	string indentationStr(indentationDepth, '\t');
+    int indentationDepth = symbolTable.getCurrentScopeDepth();
+    string indentationStr(indentationDepth, '\t');
 
     buffer.push_back(indentationStr + s);
     return buffer.size() - 1;

@@ -1,8 +1,8 @@
 #include "symbolTable.hpp"
 
 #include "hw3_output.hpp"
-#include "ralloc.hpp"
 #include "parser.tab.hpp"
+#include "ralloc.hpp"
 
 using namespace output;
 
@@ -143,7 +143,7 @@ void SymbolTable::endLoop(const AddressList &falseList) {
     this->nestedLoopDepth--;
 
     auto &buffer = CodeBuffer::instance();
-    string endLoopLabel = buffer.genLabel();
+    string endLoopLabel = buffer.genLabel("endLoop");
     buffer.bpatch(this->breakListStack.back(), endLoopLabel);
     buffer.bpatch(falseList, endLoopLabel);
 
@@ -204,7 +204,7 @@ void verifyMainExists(SymbolTable &symbolTable) {
 // no need to "try" because we don't have a danger of conflicting types here
 void addUninitializedSymbol(SymbolTable &symbolTable, shared_ptr<STypeC> rawSymbol) {
     shared_ptr<IdC> symbol = DC(IdC, rawSymbol);
-    shared_ptr<ExpC> zeroExp = NEW(ExpC,(symbol->getType(), "0"));
+    shared_ptr<ExpC> zeroExp = NEW(ExpC, (symbol->getType(), "0"));
 
     symbolTable.addSymbol(symbol);
 
@@ -220,7 +220,7 @@ void tryAddSymbolWithExp(SymbolTable &symbolTable, shared_ptr<STypeC> rawSymbol,
         errorMismatch(lineno);
     }
 
-    symbolTable.addSymbol(symbol); // now offset is set to symbol through shared ptr
+    symbolTable.addSymbol(symbol);  // now offset is set to symbol through shared ptr
 
     emitAssign(symbol, exp, symbolTable.stackVariablesPtrReg);
 }
@@ -230,9 +230,9 @@ void addAutoSymbolWithExp(SymbolTable &symbolTable, shared_ptr<STypeC> rawId,
                           shared_ptr<STypeC> rawExp) {
     string id = STYPE2STD(string, rawId);
     shared_ptr<ExpC> exp = DC(ExpC, rawExp);
-    shared_ptr<IdC> symbol = NEW(IdC,(id, exp->getType()));
+    shared_ptr<IdC> symbol = NEW(IdC, (id, exp->getType()));
 
-    symbolTable.addSymbol(symbol); // now offset is set to symbol through shared ptr
+    symbolTable.addSymbol(symbol);  // now offset is set to symbol through shared ptr
 
     emitAssign(symbol, exp, symbolTable.stackVariablesPtrReg);
 }
