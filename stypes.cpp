@@ -112,11 +112,22 @@ shared_ptr<ExpC> ExpC::getBinOpResult(shared_ptr<STypeC> stype1, shared_ptr<STyp
     string divOp;
     string opStr;
     string resultReg = ralloc.getNextReg("getBinOpResult");
+    string exp1Reg = exp1->assureAndGetRegResultOfExpression();
+    string exp2Reg = exp2->assureAndGetRegResultOfExpression();
 
     if (not isImpliedCastAllowed(stype1, stype2)) {
         errorMismatch(yylineno);
     }
     if (exp1->isInt() or exp2->isInt()) {
+        if (exp1->isByte()) {
+            string resultReg = ralloc.getNextReg();
+            codeBuffer.emit(resultReg + " = zext i8 " + exp1Reg + " to i32");
+            exp1Reg = resultReg;
+        } else if (exp2->isByte()) {
+            string resultReg = ralloc.getNextReg();
+            codeBuffer.emit(resultReg + " = zext i8 " + exp2Reg + " to i32");
+            exp2Reg = resultReg;
+        }
         resultSizeof = "i32";
         resultType = "INT";
         // BYTE is upcasted to INT
@@ -148,7 +159,7 @@ shared_ptr<ExpC> ExpC::getBinOpResult(shared_ptr<STypeC> stype1, shared_ptr<STyp
             errorMismatch(yylineno);
     }
 
-    codeBuffer.emit(resultReg + " = " + opStr + " " + resultSizeof + " " + exp1->assureAndGetRegResultOfExpression() + ", " + exp2->assureAndGetRegResultOfExpression());
+    codeBuffer.emit(resultReg + " = " + opStr + " " + resultSizeof + " " + exp1Reg + ", " + exp2Reg);
     return shared_ptr<ExpC>(NEW(ExpC, (resultType, resultReg)));
 }
 
