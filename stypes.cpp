@@ -20,11 +20,9 @@ ExpC::ExpC(const string &type, const string &regOrImmStr) : STypeC(STExpression)
     if (regOrImmStr[0] != '%' and type == "BYTE" and stoi(regOrImmStr) > 255) {
         errorByteTooLarge(yylineno, regOrImmStr);
     }
-    if (type == "BOOL") {
-        // Gen start label
-        auto &buffer = CodeBuffer::instance();
-        this->expStartLabel = buffer.genLabel("ExpCBoolStart");
-    }
+
+    auto &buffer = CodeBuffer::instance();
+    this->expStartLabel = buffer.genLabel(type + "Start");
 }
 
 bool ExpC::isInt() const {
@@ -180,7 +178,7 @@ static void insertToListsFromLists(AddressList &aListTo, AddressList &aListFrom,
     bListTo.insert(bListTo.end(), bListFrom.begin(), bListFrom.end());
 }
 
-shared_ptr<ExpC> ExpC::evalBool(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op) {
+shared_ptr<ExpC> ExpC::evalBool(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, shared_ptr<STypeC> rightOperandStartStype, int op) {
     shared_ptr<ExpC> exp1 = DC(ExpC, stype1);
     shared_ptr<ExpC> exp2 = DC(ExpC, stype2);
     shared_ptr<ExpC> resultExp;
@@ -203,26 +201,30 @@ shared_ptr<ExpC> ExpC::evalBool(shared_ptr<STypeC> stype1, shared_ptr<STypeC> st
     string exp1StartLabel = "";
     string exp2StartLabel = "";
 
-    AddressList exp1FirstList;
-    AddressList exp1SecondList;
+    AddressList exp1TrueList;
+    AddressList exp1FalseList;
 
     AddressList exp2FirstList;
     AddressList exp2SecondList;
 
+    resultExp = NEW(ExpC, ("BOOL", ""));
+
     // Emit the llvm ir code
     if (exp1->registerOrImmediate == "") {
         exp1StartLabel = exp1->expStartLabel;
-        exp1FirstList = exp1->boolTrueList;
-        exp1SecondList = exp1->boolFalseList;
+        exp1TrueList = exp1->boolTrueList;
+        exp1FalseList = exp1->boolFalseList;
     } else {
         exp1StartLabel = exp1->expStartLabel;
         instAddr = codeBuffer.emit("br i1 " + exp1->registerOrImmediate + ", label @, label @");
-        exp1FirstList = CodeBuffer::makelist(make_pair(instAddr, FIRST));
-        exp1SecondList = CodeBuffer::makelist(make_pair(instAddr, SECOND));
+        exp1TrueList = CodeBuffer::makelist(make_pair(instAddr, FIRST));
+        exp1FalseList = CodeBuffer::makelist(make_pair(instAddr, SECOND));
     }
 
+    string rightOperandStartLabel = "";
+
     if (exp2) {
-        exp2StartLabel = exp2->expStartLabel;
+        exp2StartLabel = STYPE2STD(string, rightOperandStartStype);
         if (exp2->registerOrImmediate == "") {
             exp2FirstList = exp2->boolTrueList;
             exp2SecondList = exp2->boolFalseList;
@@ -235,13 +237,13 @@ shared_ptr<ExpC> ExpC::evalBool(shared_ptr<STypeC> stype1, shared_ptr<STypeC> st
         // Decide on the integration between backpatch lists of first condiction (AND/OR)
         switch (op) {
             case OR:
-                insertToListsFromLists(trueList, exp1FirstList,
-                                       nextExpList, exp1SecondList);
+                insertToListsFromLists(trueList, exp1TrueList,
+                                       nextExpList, exp1FalseList);
 
                 break;
             case AND:
-                insertToListsFromLists(nextExpList, exp1FirstList,
-                                       falseList, exp1SecondList);
+                insertToListsFromLists(nextExpList, exp1TrueList,
+                                       falseList, exp1FalseList);
                 break;
             default:
                 throw "Unsupported operation to evalBool with nonnull exp2";
@@ -251,8 +253,8 @@ shared_ptr<ExpC> ExpC::evalBool(shared_ptr<STypeC> stype1, shared_ptr<STypeC> st
     // Decide on the integration between backpatch lists of first condiction (AND/OR)
     switch (op) {
         case NOT:
-            insertToListsFromLists(falseList, exp1FirstList,
-                                   trueList, exp1SecondList);
+            insertToListsFromLists(falseList, exp1TrueList,
+                                   trueList, exp1FalseList);
 
             break;
         case AND:
@@ -265,7 +267,6 @@ shared_ptr<ExpC> ExpC::evalBool(shared_ptr<STypeC> stype1, shared_ptr<STypeC> st
         default:
             throw "Unsupported operation to evalBool";
     }
-    resultExp = NEW(ExpC, ("BOOL", ""));
     resultExp->boolFalseList = falseList;
     resultExp->boolTrueList = trueList;
     resultExp->expStartLabel = exp1StartLabel;
@@ -290,12 +291,13 @@ shared_ptr<ExpC> ExpC::getCmpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC
 
     Ralloc &ralloc = Ralloc::instance();
     CodeBuffer &codeBuffer = CodeBuffer::instance();
-    string resultReg = ralloc.getNextReg("cmpOpRes");
 
-    shared_ptr<ExpC> resultExp = NEW(ExpC, ("BOOL", resultReg));
+    string resultReg = ralloc.getNextReg("cmpOpRes");
 
     string exp1RegOrImm = exp1->assureAndGetRegResultOfExpression();
     string exp2RegOrImm = exp2->assureAndGetRegResultOfExpression();
+
+    shared_ptr<ExpC> resultExp = NEW(ExpC, ("BOOL", ""));
 
     if (exp1->isInt() or exp2->isInt()) {
         regSizeofDecorator = " i32 ";
@@ -334,6 +336,9 @@ shared_ptr<ExpC> ExpC::getCmpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC
     }
 
     codeBuffer.emit(resultReg + " = icmp " + cmpOpStr + regSizeofDecorator + exp1RegOrImm + ", " + exp2RegOrImm);
+    int instr = codeBuffer.emit("br i1 " + resultReg + ", label @, label @");
+    resultExp->boolTrueList.push_back(make_pair(instr, FIRST));
+    resultExp->boolFalseList.push_back(make_pair(instr, SECOND));
     return resultExp;
 }
 
@@ -363,6 +368,8 @@ shared_ptr<ExpC> ExpC::getCastResult(shared_ptr<STypeC> dstStype, shared_ptr<STy
     CodeBuffer &codeBuffer = CodeBuffer::instance();
     string resultReg = ralloc.getNextReg("castRes");
 
+    shared_ptr<ExpC> resultExp = NEW(ExpC, (dstType->getTypeName(), resultReg));
+
     if (exp->isInt() and dstType->getTypeName() == "BYTE") {
         codeBuffer.emit(resultReg + " = trunc i32 " + exp->assureAndGetRegResultOfExpression() + " to i8");
     } else if (exp->isByte() and dstType->getTypeName() == "INT") {
@@ -371,7 +378,7 @@ shared_ptr<ExpC> ExpC::getCastResult(shared_ptr<STypeC> dstStype, shared_ptr<STy
         codeBuffer.emit(resultReg + " = add " + typeNameToLlvmType(exp->getType()) + " " + exp->assureAndGetRegResultOfExpression() + ", 0");
     }
     codeBuffer.emit("; DEBUG: got cast result (" + dstType->getTypeName() + ") from " + exp->getType());
-    return NEW(ExpC, (dstType->getTypeName(), resultReg));
+    return resultExp;
 }
 
 shared_ptr<ExpC> ExpC::getCallResult(shared_ptr<FuncIdC> funcId, shared_ptr<STypeC> argsStype) {
@@ -425,6 +432,7 @@ shared_ptr<ExpC> ExpC::loadIdValue(shared_ptr<IdC> idSymbol, string stackVariabl
     string offsetReg = ralloc.getNextReg("loadIdOffset");
     string idAddrReg = ralloc.getNextReg("loadIdIdAddr");
     string expReg = ralloc.getNextReg("idVal_" + idSymbol->getName());
+    shared_ptr<ExpC> idValue = NEW(ExpC, (idSymbol->getType(), expReg));
 
     codeBuffer.emit(offsetReg + " = add i32 0, " + std::to_string(idSymbol->getOffset()));
     codeBuffer.emit(idAddrReg + " = getelementptr i32, i32* " + stackVariablesPtrReg + ", i32 " + offsetReg);
@@ -436,8 +444,6 @@ shared_ptr<ExpC> ExpC::loadIdValue(shared_ptr<IdC> idSymbol, string stackVariabl
     }
 
     codeBuffer.emit(expReg + " = load " + llvmType + ", " + llvmType + "* " + idAddrRegCorrectSize);
-
-    shared_ptr<ExpC> idValue = NEW(ExpC, (idSymbol->getType(), expReg));
 
     return idValue;
 }
@@ -458,6 +464,14 @@ shared_ptr<ExpC> ExpC::loadStringLiteralAddr(string literal) {
                     strLiteralAutoGeneratedName + ", i32 0, i32 0");
 
     return NEW(ExpC, ("STRING", resultReg));
+}
+
+shared_ptr<ExpC> ExpC::finallize(shared_ptr<ExpC> exp) {
+    if (exp->getType() == "BOOL" and exp->registerOrImmediate != "") {
+        auto &buffer = CodeBuffer::instance();
+        buffer.emit("br i1 " + exp->registerOrImmediate + " , label @, label @");
+    }
+    return exp;
 }
 
 const string &ExpC::getType() const { return type; }

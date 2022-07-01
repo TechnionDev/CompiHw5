@@ -111,7 +111,7 @@ class ExpC : public STypeC {
     // Get result of bin operation on two expressions
     static shared_ptr<ExpC> getBinOpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op);
     // Short-Circuit eval bool value
-    static shared_ptr<ExpC> evalBool(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op);
+    static shared_ptr<ExpC> evalBool(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, shared_ptr<STypeC> rightOperandStartStype, int op);
     // Get shared_ptr<ExpC> from the result of comparing exp1 and exp2
     static shared_ptr<ExpC> getCmpResult(shared_ptr<STypeC> stype1, shared_ptr<STypeC> stype2, int op);
     // Get shared_ptr<ExpC> by casting exp from srcType to dstType
@@ -124,6 +124,8 @@ class ExpC : public STypeC {
     static shared_ptr<ExpC> loadStringLiteralAddr(string literal);
     // Ansure there's a true and false lists. If either is zero, force concrete value for the expression and create conditional jump and add placeholders to falselist
     void ensureTrueFalseList();
+
+    static shared_ptr<ExpC> finallize( shared_ptr<ExpC> exp);
 };
 
 class CallC : public STypeC {

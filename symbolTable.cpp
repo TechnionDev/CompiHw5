@@ -14,6 +14,7 @@ SymbolTable::SymbolTable() {
     this->addScope();
     this->addSymbol(NEW(FuncIdC, ("print", "VOID", vector<shared_ptr<IdC>>({NEW(IdC, ("msg", "STRING"))}), true)));
     this->addSymbol(NEW(FuncIdC, ("printi", "VOID", vector<shared_ptr<IdC>>({NEW(IdC, ("i", "INT"))}), true)));
+    this->addSymbol(NEW(FuncIdC, ("error_division_by_zero", "VOID", vector<shared_ptr<IdC>>({}), true)));
     // Emit print functions' implementation
     auto &buffer = CodeBuffer::instance();
     buffer.emitGlobal("declare i32 @printf(i8*, ...)");
