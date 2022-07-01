@@ -36,7 +36,7 @@ jobs:
             cp hw5 ../
       - name: Run Tests
         run: |
-            ./run_tests.sh
+            python3 compile_and_run.py
       - name: Create artifacts dir
         run: |
             mkdir -p ./submission
