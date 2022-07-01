@@ -19,7 +19,7 @@ make_process = subprocess.Popen("make")
 stdout, stderr = make_process.communicate()
 if stderr is not None:
     print(f"{RED}BUILD FAILED!{NC}")
-    exit(0)
+    exit(1)
 print()
 
 # Run tests
@@ -106,3 +106,4 @@ else:
     print(f"{GREEN}PASSED ({successful_tests_count}/{total_tests_count}){NC}")
     print(f"{RED}FAILED ({failed_tests_count}/{total_tests_count}){NC}")
     print(f"You can see failed output at testname.our.*")
+    exit(1)
