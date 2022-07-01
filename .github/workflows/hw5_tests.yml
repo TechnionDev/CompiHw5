@@ -17,7 +17,7 @@ jobs:
       # - name: Setup debug session
       #   uses: lhotari/action-upterm@v1
       - name: Install dependencies
-        run: sudo apt update && sudo apt install flex bison llvm-7-runtime
+        run: sudo apt update && sudo apt install flex bison llvm
       - name: Print versions
         run: |
             bison -V
