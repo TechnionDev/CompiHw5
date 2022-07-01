@@ -14,14 +14,6 @@ def clear_row():
     clear_the_line_proc = subprocess.Popen(["tput", "el"])
     clear_the_line_proc.communicate()
 
-# Build compiler
-make_process = subprocess.Popen("make")
-stdout, stderr = make_process.communicate()
-if stderr is not None:
-    print(f"{RED}BUILD FAILED!{NC}")
-    exit(1)
-print()
-
 # Run tests
 total_tests_count = 0
 successful_tests_count = 0
