@@ -48,7 +48,7 @@ SymbolTable::~SymbolTable() {}
 
 void SymbolTable::addScope(int funcArgCount) {
     if (not((funcArgCount >= 0 and this->scopeStartOffsets.size() == 1) or (this->scopeStartOffsets.size() > 1 and funcArgCount == 0) or this->scopeStartOffsets.size() == 0)) {
-        throw "Code error. We should only add a scope of a function when we are in the global scope";
+        throw Exception("Code error. We should only add a scope of a function when we are in the global scope");
     }
 
     this->scopeSymbols.push_back(vector<string>());
@@ -98,7 +98,7 @@ void SymbolTable::removeScope() {
 
 void SymbolTable::addFormal(shared_ptr<IdC> type) {
     if (type == nullptr) {
-        throw "Can't add a nullptr formal to the symbol table";
+        throw Exception("Can't add a nullptr formal to the symbol table");
     }
 
     if (this->symTbl[type->getName()] != nullptr) {
@@ -113,7 +113,7 @@ void SymbolTable::addSymbol(shared_ptr<IdC> type) {
     const string &name = type->getName();
     // Check that the symbol doesn't exist in the scope yet
     if (type == nullptr) {
-        throw "Can't add a nullptr symbol to the symbol table";
+        throw Exception("Can't add a nullptr symbol to the symbol table");
     }
 
     if (type->getType() == "STRING") {
@@ -139,6 +139,7 @@ void SymbolTable::addContinue() {
         errorUnexpectedContinue(yylineno);
     }
     auto &buffer = CodeBuffer::instance();
+    buffer.emit("; DEBUG: " + to_string(yylineno) + ": adding continue statement for loop in depth " + to_string(this->nestedLoopDepth));
     buffer.emit("br label %" + this->loopCondStartLabelStack.back());
 }
 
@@ -147,6 +148,7 @@ void SymbolTable::addBreak() {
         errorUnexpectedBreak(yylineno);
     }
     auto &buffer = CodeBuffer::instance();
+    buffer.emit("; DEBUG: " + to_string(yylineno) + ": adding break to loop in depth " + to_string(this->nestedLoopDepth));
     AddressIndPair instruction = make_pair(buffer.emit("br label @"), FIRST);
     this->breakListStack.back().push_back(instruction);
 }
@@ -157,16 +159,15 @@ void SymbolTable::startLoop(const string &loopCondStartLabel) {
     this->breakListStack.push_back(vector<AddressIndPair>());
 }
 
-void SymbolTable::endLoop(const AddressList &falseList) {
-    this->nestedLoopDepth--;
-
+void SymbolTable::endLoop(AddressList &falseList) {
     auto &buffer = CodeBuffer::instance();
-    string endLoopLabel = buffer.genLabel("endLoop");
+    string endLoopLabel = buffer.genLabel("endLoopDepth" + to_string(this->nestedLoopDepth));
     buffer.bpatch(this->breakListStack.back(), endLoopLabel);
     buffer.bpatch(falseList, endLoopLabel);
 
     this->breakListStack.pop_back();
     this->loopCondStartLabelStack.pop_back();
+    this->nestedLoopDepth--;
 }
 
 shared_ptr<IdC> SymbolTable::getVarSymbol(const string &name) {
@@ -230,12 +231,12 @@ void addUninitializedSymbol(SymbolTable &symbolTable, shared_ptr<STypeC> rawSymb
 }
 
 void tryAddSymbolWithExp(SymbolTable &symbolTable, shared_ptr<STypeC> rawSymbol,
-                         shared_ptr<STypeC> rawExp, int lineno) {
+                         shared_ptr<STypeC> rawExp) {
     shared_ptr<IdC> symbol = DC(IdC, rawSymbol);
     shared_ptr<ExpC> exp = DC(ExpC, rawExp);
 
     if (not areStrTypesCompatible(symbol->getType(), exp->getType())) {
-        errorMismatch(lineno);
+        errorMismatch(yylineno);
     }
 
     symbolTable.addSymbol(symbol);  // now offset is set to symbol through shared ptr
@@ -255,8 +256,7 @@ void addAutoSymbolWithExp(SymbolTable &symbolTable, shared_ptr<STypeC> rawId,
     emitAssign(symbol, exp, symbolTable.stackVariablesPtrReg);
 }
 
-void tryAssignExp(SymbolTable &symbolTable, shared_ptr<STypeC> rawId, shared_ptr<STypeC> rawExp,
-                  int lineno) {
+void tryAssignExp(SymbolTable &symbolTable, shared_ptr<STypeC> rawId, shared_ptr<STypeC> rawExp) {
     string id = STYPE2STD(string, rawId);
     shared_ptr<IdC> symbol = symbolTable.getVarSymbol(id);
     shared_ptr<ExpC> exp = DC(ExpC, rawExp);
@@ -265,7 +265,7 @@ void tryAssignExp(SymbolTable &symbolTable, shared_ptr<STypeC> rawId, shared_ptr
     string expType = exp->getType();
 
     if (not areStrTypesCompatible(symbolType, expType)) {
-        errorMismatch(lineno);
+        errorMismatch(yylineno);
     }
 
     emitAssign(symbol, exp, symbolTable.stackVariablesPtrReg);
@@ -275,41 +275,50 @@ void emitAssign(shared_ptr<IdC> symbol, shared_ptr<ExpC> exp, string stackVariab
     CodeBuffer &codeBuffer = CodeBuffer::instance();
     Ralloc &ralloc = Ralloc::instance();
 
-    string llvmType = typeNameToLlvmType(exp->getType());
-    string offsetReg = ralloc.getNextReg("offsetEmitAssign");
-    string idAddrReg = ralloc.getNextReg("idAddrEmitAssign");
-    string expReg = exp->assureAndGetRegResultOfExpression();
+    string llvmLvalType = typeNameToLlvmType(symbol->getType());
+    string llvmRvalType = typeNameToLlvmType(exp->getType());
+    string offsetReg = ralloc.getNextReg("offsetEmitAssign_" + symbol->getName());
+    string idAddrReg = ralloc.getNextReg("idAddrEmitAssign_" + symbol->getName());
+    string expReg = exp->getRegOrImmResult();
 
     codeBuffer.emit(offsetReg + " = add i32 0, " + std::to_string(symbol->getOffset()));
     codeBuffer.emit(idAddrReg + " = getelementptr i32, i32* " + stackVariablesPtrReg + ", i32 " + offsetReg);
 
     string idAddrRegCorrectSize = idAddrReg;
 
-    if (llvmType != "i32") {
-        idAddrRegCorrectSize = ralloc.getNextReg("idAddrCorrect");
-        codeBuffer.emit(idAddrRegCorrectSize + " = bitcast i32* " + idAddrReg + " to " + llvmType + "*");
+    // Check and zext if needed
+    if (llvmRvalType != llvmLvalType) {
+        string zextExpReg = ralloc.getNextReg("zextEmitAssign_" + symbol->getName());
+        codeBuffer.emit(zextExpReg + " = zext " + llvmRvalType + " " + expReg + " to " + llvmLvalType);
+        expReg = zextExpReg;
     }
 
-    codeBuffer.emit("store " + llvmType + " " + expReg + ", " + llvmType + "* " + idAddrRegCorrectSize);
+    if (llvmLvalType != "i32") {
+        idAddrRegCorrectSize = ralloc.getNextReg("idAddrCorrect_" + symbol->getName());
+        codeBuffer.emit(idAddrRegCorrectSize + " = bitcast i32* " + idAddrReg + " to " + llvmLvalType + "*");
+    }
+
+    codeBuffer.emit("store " + llvmLvalType + " " + expReg + ", " + llvmLvalType + "* " + idAddrRegCorrectSize);
 }
 
-void handleReturn(shared_ptr<RetTypeNameC> retType, int lineno) {
+void handleReturn(shared_ptr<RetTypeNameC> retType) {
     if (retType == nullptr) {
-        throw "This should be impossible. Syntax error wise";
+        throw Exception("This should be impossible. Syntax error wise");
     } else if (retType->getTypeName() != "VOID") {
-        errorMismatch(lineno);
+        errorMismatch(yylineno);
     }
 
     emitReturn(retType, nullptr);
 }
 
-void handleReturnExp(shared_ptr<RetTypeNameC> retType, shared_ptr<STypeC> rawExp, int lineno) {
+void handleReturnExp(shared_ptr<RetTypeNameC> retType, shared_ptr<STypeC> rawExp) {
     shared_ptr<ExpC> exp = DC(ExpC, rawExp);
+    exp->getRegOrImmResult();
 
     if (retType == nullptr) {
-        throw "This should be impossible. Syntax error wise";
+        throw Exception("This should be impossible. Syntax error wise");
     } else if (not areStrTypesCompatible(retType->getTypeName(), exp->getType())) {
-        errorMismatch(lineno);
+        errorMismatch(yylineno);
     }
 
     emitReturn(retType, exp);
@@ -318,16 +327,18 @@ void handleReturnExp(shared_ptr<RetTypeNameC> retType, shared_ptr<STypeC> rawExp
 void emitReturn(shared_ptr<RetTypeNameC> retType, shared_ptr<ExpC> exp) {
     CodeBuffer &codeBuffer = CodeBuffer::instance();
 
+    if (exp == nullptr) {
+        if (retType->getTypeName() != "VOID") {
+            errorMismatch(yylineno);
+        }
+        codeBuffer.emit("ret void");
+        return;
+    }
+
     if (retType->getTypeName() != exp->getType()) {
-        throw "this should be impossible. wrong function usage.";
+        throw Exception("this should be impossible. wrong function usage.");
     }
 
     string llvmType = typeNameToLlvmType(exp->getType());
-    string code = "ret " + llvmType;
-
-    if (retType->getTypeName() != "VOID") {
-        code += " " + exp->assureAndGetRegResultOfExpression();
-    }
-
-    codeBuffer.emit(code);
+    codeBuffer.emit("ret " + llvmType + " " + exp->getRegOrImmResult());
 }

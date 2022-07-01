@@ -97,42 +97,44 @@ OpenScope:      /* epsilon */ %empty                { symbolTable.addScope(); };
 CloseScope:     /* epsilon */ %empty                { symbolTable.removeScope(); };
 Statement:      LBRACE OpenScope Statements RBRACE CloseScope
                 | TypeDecl SC                       { addUninitializedSymbol(symbolTable, $1); }
-                | TypeDecl ASSIGN Exp SC            { tryAddSymbolWithExp(symbolTable, $1, $3, yylineno); }
-                | AUTO ID ASSIGN Exp SC             { addAutoSymbolWithExp(symbolTable, $2, $4); }
-                | ID ASSIGN Exp SC                  { tryAssignExp(symbolTable, $1, $3, yylineno); }
+                | TypeDecl ASSIGN ExpOrFinScBool SC { tryAddSymbolWithExp(symbolTable, $1, $3); }
+                | AUTO ID ASSIGN ExpOrFinScBool SC  { addAutoSymbolWithExp(symbolTable, $2, $4); }
+                | ID ASSIGN ExpOrFinScBool SC       { tryAssignExp(symbolTable, $1, $3); }
                 | Call SC                           {}
-                | RETURN SC                         { handleReturn(symbolTable.retType, yylineno); }
-                | RETURN Exp SC                     { handleReturnExp(symbolTable.retType, $2, yylineno); }
-                | IF LPAREN BoolExp RPAREN OpenScope IfStart Statement CloseScope %prec IF { handleIfEnd($3); }
-                | IF LPAREN BoolExp RPAREN OpenScope IfStart Statement CloseScope ELSE { $$ = handleIfEnd($3, true); } OpenScope  Statement CloseScope { handleElseEnd($10); }
-                | WHILE LPAREN BoolExp RPAREN { handleWhileStart($3); } OpenScope Statement CloseScope %prec WHILE { handleWhileEnd($3); }
+                | RETURN SC                         { handleReturn(symbolTable.retType); }
+                | RETURN ExpOrFinScBool SC          { handleReturnExp(symbolTable.retType, $2); }
+                | IF LPAREN CondBoolExp RPAREN OpenScope IfStart Statement CloseScope %prec IF  { handleIfEnd($3); }
+                | IF LPAREN CondBoolExp RPAREN OpenScope IfStart Statement CloseScope ELSE      { $$ = handleIfEnd($3, true); }
+                                                                OpenScope  Statement CloseScope { handleElseEnd($10); }
+                | WHILE LPAREN Label CondBoolExp RPAREN { handleWhileStart($4, STYPE2STD(string, $3)); } OpenScope Statement CloseScope %prec WHILE { handleWhileEnd($4); }
                 | BREAK SC                          { symbolTable.addBreak(); }
                 | CONTINUE SC                       { symbolTable.addContinue(); }
                 ;
-IfStart:        /* epsilon */ %empty                { $$ = getLastBoolExpC(); handleIfStart($$); }
+IfStart:        /* epsilon */ %empty                { $$ = getLastScBool(); handleIfStart($$); }
                 ;
 TypeDecl:       Type ID                             { $$ = NEW(IdC, (STYPE2STD(string, $2), DC(VarTypeNameC, $1)->getTypeName())); }
                 ;
 Call:           ID LPAREN ExpList RPAREN            { $$ = ExpC::getCallResult(GET_FUNC($1), $3); }
                 | ID LPAREN RPAREN                  { $$ = ExpC::getCallResult(GET_FUNC($1), NEWSTD(vector<shared_ptr<ExpC> >)); }
                 ;
-ExpList:        Exp                                 {
-                                                        $$ = NEWSTD(vector<shared_ptr<ExpC> >);
-                                                        auto exp = DC(ExpC, $1);
-                                                        exp->assureAndGetRegResultOfExpression();
-                                                        STYPE2STD(vector<shared_ptr<ExpC> >, $$).push_back(exp);
-                                                    }
-                | Exp COMMA ExpList                 {
-                                                        STYPE2STD(vector<shared_ptr<ExpC> >, $3).push_back(DC(ExpC, $1));
-                                                        $$ = $3;
-                                                    }
+ExpList:        ExpOrFinScBool                      { $$ = handleExpList($1, nullptr); }
+                | ExpOrFinScBool COMMA ExpList      { $$ = handleExpList($1, $3); }
+
                 ;
 Type:           INT                                 { $$ = NEW(VarTypeNameC, ("INT")); }
                 | BYTE                              { $$ = NEW(VarTypeNameC, ("BYTE")); }
                 | BOOL                              { $$ = NEW(VarTypeNameC, ("BOOL")); }
                 ;
-BoolExp:        Exp                                 { $$ = $1; saveBoolExpC($1); }
+ExpOrFinScBool: FinScBool %prec SECOND_PRIOR        { $$ = $1; }
+                | Exp     %prec FIRST_PRIOR         { $$ = $1; }
+                /* | LPAREN FinScBool RPAREN           { $$ = $1; } */ // TODO: Check if this rule is at all needed
+                ;
+FinScBool:      ScBoolExp                           { $$ = assureScBool($1)->finallizeToExpC();}
+                ;
+CondBoolExp:    AssureScFromBool                    { $$ = saveScBool($1); }
+                ;
 Exp:            LPAREN Exp RPAREN                   { $$ = $2; }
+                ; 
                 | Exp ADDOP Exp                     { $$ = ExpC::getBinOpResult($1, $3, ADDOP); }
                 | Exp SUBOP Exp                     { $$ = ExpC::getBinOpResult($1, $3, SUBOP); }
                 | Exp MULOP Exp                     { $$ = ExpC::getBinOpResult($1, $3, MULOP); }
@@ -142,12 +144,17 @@ Exp:            LPAREN Exp RPAREN                   { $$ = $2; }
                 | NUM                               { $$ = NEW(ExpC,("INT", STYPE2STD(string, $1))); }
                 | NUM B                             { $$ = NEW(ExpC,("BYTE", STYPE2STD(string, $1))); }
                 | STRING                            { $$ = ExpC::loadStringLiteralAddr(STYPE2STD(string, $1)); }
-                | TRUE                              { $$ = NEW(ExpC,("BOOL", "true")); }
-                | FALSE                             { $$ = NEW(ExpC,("BOOL", "false")); }
-                | NOT Exp                           { $$ = ExpC::evalBool($2, nullptr, nullptr, NOT); }
-                | Exp AND BoolLabel Exp             { $$ = ExpC::evalBool($1, $4, $3, AND); }
-                | Exp OR BoolLabel Exp              { $$ = ExpC::evalBool($1, $4, $3, OR); }
-                | Exp GEOP Exp                      { $$ = ExpC::getCmpResult($1, $3, GEOP); }
+                | TRUE                              { $$ = NEW(ExpC, ("BOOL", "true")); }
+                | FALSE                             { $$ = NEW(ExpC, ("BOOL", "false")); }
+                ;
+AssureScFromBool: Exp                               { $$ = NEW(ShortCircuitBool, (assureExpC($1))); }
+                | ScBoolExp                         { $$ = assureScBool($1); }
+                ;
+ScBoolExp:      NOT AssureScFromBool                { $$ = assureScBool($2)->evalBool(nullptr, nullptr, NOT); }
+                | AssureScFromBool AND Label AssureScFromBool     { $$ = assureScBool($1)->evalBool($4, $3, AND); }
+                | AssureScFromBool OR Label AssureScFromBool      { $$ = assureScBool($1)->evalBool($4, $3, OR); }
+                ;
+Exp:              Exp GEOP Exp                      { $$ = ExpC::getCmpResult($1, $3, GEOP); }
                 | Exp GTOP Exp                      { $$ = ExpC::getCmpResult($1, $3, GTOP); }
                 | Exp LEOP Exp                      { $$ = ExpC::getCmpResult($1, $3, LEOP); }
                 | Exp LTOP Exp                      { $$ = ExpC::getCmpResult($1, $3, LTOP); }
@@ -156,15 +163,20 @@ Exp:            LPAREN Exp RPAREN                   { $$ = $2; }
                 | LPAREN Type RPAREN Exp            { $$ = NEW(ExpC, (DC(VarTypeNameC, $2)->getTypeName(), DC(VarTypeNameC, $4)->getTypeName())); }
                 ;
 
-BoolLabel:      /* epsilon */ %empty                { $$ = NEWSTD_V(string, (CodeBuffer::instance().genLabel("BoolBinOpRight"))); }
+Label:           /* epsilon */ %empty                { $$ = NEWSTD_V(string, (CodeBuffer::instance().genLabel("BoolBinOpRight"))); }
                 ;
 %%
 
 
 /* User routines */
 int main() {
-    yyparse();
     auto &buffer = CodeBuffer::instance();
+    /* try {
+        yyparse();
+    } catch (Exception e) {
+        cout << "Got exception: " << e.what() << endl;
+    } */
+    yyparse();
     buffer.printGlobalBuffer();
     buffer.printCodeBuffer();
     verifyMainExists(symbolTable);

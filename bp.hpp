@@ -28,7 +28,7 @@ public:
 	std::string genLabel(const string& prefix = "");
 
 	//writes command to the buffer, returns its location in the buffer
-	int emit(const std::string &command);
+	int emit(const std::string &command, bool canSkip = false);
 
 	//gets a pair<int,BranchLabelIndex> item of the form {buffer_location, branch_label_index} and creates a list for it
 	static vector<pair<int,BranchLabelIndex>> makelist(pair<int,BranchLabelIndex> item);
@@ -50,8 +50,10 @@ public:
 	bpatch(makelist({loc2,SECOND}),"my_false_label"); - location loc2 in the buffer will now contain the command "br i1 %cond, label @, label %my_false_label"
 	bpatch(makelist({loc2,FIRST}),"my_true_label"); - location loc2 in the buffer will now contain the command "br i1 %cond, label @my_true_label, label %my_false_label"
 	*/
-	void bpatch(const vector<pair<int,BranchLabelIndex>>& address_list, const std::string &label);
+	void bpatch(vector<pair<int,BranchLabelIndex>>& address_list, const std::string &label);
 	
+	void bpatch(pair<int, BranchLabelIndex> pair, const std::string& label);
+
 	//prints the content of the code buffer to stdout
 	void printCodeBuffer();
 

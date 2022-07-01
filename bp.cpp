@@ -7,6 +7,8 @@
 #include "ralloc.hpp"
 #include "symbolTable.hpp"
 
+extern int yylineno;
+
 using namespace std;
 
 bool replace(string& str, const string& from, const string& to, const BranchLabelIndex index);
@@ -28,31 +30,41 @@ string CodeBuffer::genLabel(const string& prefix) {
     label << buffer.size();
     std::string ret(label.str());
     label << ":";
-    emit("br label %" + ret);
+    emit("br label %" + ret, true);
     emit(label.str());
     return ret;
 }
 
 extern SymbolTable symbolTable;
 
-int CodeBuffer::emit(const string& s) {
+int CodeBuffer::emit(const string& s, bool canSkip) {
     int indentationDepth = symbolTable.getCurrentScopeDepth();
     string indentationStr(indentationDepth, '\t');
     // Skip both this and prev emit start with br
-    if (s.substr(0, 9) == "br label " and buffer.back().find("br ") != string::npos) {
-        return buffer.size() - 1;
+    if (canSkip and s.substr(0, 9) == "br label " and (buffer.back().find("br ") != string::npos or buffer.back().find("ret ") != string::npos)) {
+        return -1;
     }
 
-    buffer.push_back(indentationStr + s);
+    buffer.push_back(indentationStr + s + " ; " + to_string(yylineno));
     return buffer.size() - 1;
 }
 
-void CodeBuffer::bpatch(const vector<pair<int, BranchLabelIndex>>& address_list, const std::string& label) {
+void CodeBuffer::bpatch(vector<pair<int, BranchLabelIndex>>& address_list, const std::string& label) {
     for (vector<pair<int, BranchLabelIndex>>::const_iterator i = address_list.begin(); i != address_list.end(); i++) {
         int address = (*i).first;
+        if (address == -1) {
+            continue;
+        }
         BranchLabelIndex labelIndex = (*i).second;
         replace(buffer[address], "@", "%" + label, labelIndex);
     }
+    address_list.clear();
+}
+
+void CodeBuffer::bpatch(pair<int, BranchLabelIndex> pair, const std::string& label) {
+    int address = pair.first;
+    BranchLabelIndex labelIndex = pair.second;
+    replace(buffer[address], "@", "%" + label, labelIndex);
 }
 
 void CodeBuffer::printCodeBuffer() {
@@ -61,8 +73,8 @@ void CodeBuffer::printCodeBuffer() {
         if (it->find("label @") == string::npos) {
             cout << *it << endl;
         } else {
-			cout << "; DEBUG: removed> " << *it << endl;
-		}
+            cout << "; DEBUG: removed> " << *it << endl;
+        }
     }
 }
 
