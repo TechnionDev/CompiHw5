@@ -14,3 +14,8 @@ define void @print(i8*) {
     call i32 (i8*, ...) @printf(i8* %spec_ptr, i8* %0)
     ret void
 }
+
+define i32 @main() {
+    call void (i32) @printi(i32 0)
+    ret void
+}

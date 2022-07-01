@@ -5,7 +5,6 @@
     #include "parser.tab.hpp"
     #include "hw3_output.hpp"
 
-    using namespace hw3;
     using namespace output;
 
     char current_str[1025];
@@ -34,9 +33,9 @@ escapechars     ([\\"nrt0])
 (b)                                 return B;
 (bool)                              return BOOL;
 (auto)                              return AUTO;
-(and)                               return AND;
-(or)                                return OR;
-(not)                               return NOT;
+(and)                               {printf("; DEBUG: token AND\n"); return AND;}
+(or)                                {printf("; DEBUG: token OR\n"); return OR;}
+(not)                               {printf("; DEBUG: token NOT\n"); return NOT;}
 (true)                              return TRUE;
 (false)                             return FALSE;
 (return)                            return RETURN;
@@ -52,15 +51,21 @@ escapechars     ([\\"nrt0])
 (\{)                                return LBRACE;
 (\})                                return RBRACE;
 (=)                                 return ASSIGN;
-((\<=)|(\>=)|(\<)|(\>))             return RELOP;
-((==)|(!=))                         return EQOP;
-((\+)|(\-))                         return PLUSOP;
-((\*)|(\/))                         return MULTOP;
+(\>=)                               return GEOP;
+(\>)                                return GTOP;
+(\<=)                               return LEOP;
+(\<)                                return LTOP;
+((==))                              return EQOP;
+((!=))                              return NEOP;
+(\+)                                return ADDOP;
+(\-)                                return SUBOP;
+(\*)                                return MULOP;
+(\/)                                return DIVOP;
 (\/\/[^\r\n]*[ \r|\n|\r\n]?)        ; // Handle comment
 ({letter}({letter}|{digit})*)       {yylval = NEWSTD_V(std::string, (yytext)); return ID;}
 (0{digit}+)                         error_unprintable_char(*yytext);
 (0|{nozerodigit}{digit}*)           {yylval = NEWSTD_V(std::string, (yytext)); return NUM;}
-(\"([^\n\r\"\\]|\\[rnt"\\])+\")     {return STRING;}
+(\"([^\n\r\"\\]|\\[rnt"\\])+\")     {yylval = NEWSTD_V(std::string, (yytext)); return STRING;}
 .                                   {errorLex(yylineno);}
 %%
 

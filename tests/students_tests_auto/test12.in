@@ -1,0 +1,13 @@
+int returnInt() {
+	auto x = 3;
+	return x;
+}
+void maxTestsAssignFromFunc() {
+	auto x = returnInt();
+	printi(x);
+}
+
+
+void main() {
+     maxTestsAssignFromFunc();
+}

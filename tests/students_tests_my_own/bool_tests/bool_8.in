@@ -1,0 +1,49 @@
+bool foofalse()
+{
+	printi(0);
+	
+	return false;
+}
+bool tootrue()
+{
+	printi(1);
+	
+	return true;
+}
+
+void main()
+{
+	bool x;
+	print("B:");
+	x = true or foofalse();
+	if(x)
+		print("TRUE");
+	print("C:");
+	x = false or foofalse();
+	if(x)
+		print("TRUE");
+	print("D:");
+	x = true or tootrue();
+	if(x)
+		print("TRUE");
+	print("E:");
+	x = false or tootrue();
+	if(x)
+		print("TRUE");
+	print("F:");
+	x = true and foofalse();
+	if(x)
+		print("TRUE");
+	print("G:");
+	x = false and foofalse();
+	if(x)
+		print("TRUE");
+	print("H:");
+	x = true and tootrue();
+	if(x)
+		print("TRUE");
+	print("I:");
+	x = false and tootrue();
+	if(x)
+		print("TRUE");
+}

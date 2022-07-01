@@ -1,0 +1,12 @@
+bool funBool(bool var){
+if (var) print("var is true :)");
+else print("var is false :(");
+
+}
+
+void main()
+{
+	bool t = true;
+	bool f = false;
+	funBool(f);
+}

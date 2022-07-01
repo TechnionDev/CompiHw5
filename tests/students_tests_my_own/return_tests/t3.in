@@ -1,0 +1,73 @@
+int max(int a, int cc){
+	if(a>=cc)
+		return a;//here
+	return cc;
+	//deadCode
+	int x=42;
+	return 42;
+}
+
+byte maxb(byte a, byte bb)
+{
+	if(a<bb)
+		int x; //meaningless
+	else
+		return a;//here
+	return bb;
+}
+
+bool isFirstBigger(int a, int bb)
+{
+	if(a>=bb)
+		if(a != bb)
+			return true;//here
+		else
+			return false;
+	else
+		return false;
+}
+
+void printStatement(bool printPunch)
+{
+	print("I heart Compi...");
+	if(not printPunch)
+		return;//here
+	print("NOT!");
+}
+
+void printStatement2(bool printPunch)
+{
+	print("I heart Compi...");
+	if(printPunch)
+		print("NOT!");
+	else
+		return;//here
+}
+
+void printStatement3(bool printPunch)
+{
+	print("I heart Compi...");
+	if(printPunch){
+		print("NOT!");
+		return;//here
+	}
+	else
+		return;
+	print("I really do!");
+}
+
+void main()
+{
+	print("max of 3 and 2 is ");
+	printi(max(3,2));
+	print("max of 3b and 2b is ");
+	printi(maxb(3b,2b));
+	print("Is 3 really bigger then 2?");
+	if(isFirstBigger(3,2))
+		print("yes!");
+	else
+		print("no!");
+	printStatement(false);
+	printStatement2(false);
+	printStatement3(true);
+}

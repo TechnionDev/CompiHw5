@@ -1,0 +1,11 @@
+void maxTestsWhile() {
+	auto i = 0;
+	while (i < 10) {
+		printi(i);
+		i = i + 1;
+	}
+}
+
+void main() {
+     maxTestsWhile();
+}

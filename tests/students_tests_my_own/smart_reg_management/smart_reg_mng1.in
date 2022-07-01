@@ -1,0 +1,27 @@
+int foo0(int a, int d,int c)
+{
+	return 0;
+}
+
+void main(){
+	int x0=1;
+	int x1=1;
+	int x2=1;
+	int x3=1;
+	int x4=1;
+	int x5=1;
+	int x6=1;
+	int x7=1;
+	int x8=1;
+	int x9=1;
+	int x10=1;
+	int x11=1;
+	int x12=1;
+	int x13=1;
+	int x14=1;
+	int x15=1;
+	int x16=1;
+	int x17=1;
+	int res = x0+x1+x2+x3+x4+x5+x6+x7+x8+x9+x10+x11+x12+x13+x14+x15+x16+x17+foo0(1,1,1);
+	printi(res);
+}

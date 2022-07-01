@@ -17,7 +17,7 @@ jobs:
       # - name: Setup debug session
       #   uses: lhotari/action-upterm@v1
       - name: Install dependencies
-        run: sudo apt update && sudo apt install flex bison
+        run: sudo apt update && sudo apt install flex bison llvm
       - name: Print versions
         run: |
             bison -V
@@ -36,7 +36,7 @@ jobs:
             cp hw5 ../
       - name: Run Tests
         run: |
-            ./run_tests.sh
+            python3 compile_and_run.py
       - name: Create artifacts dir
         run: |
             mkdir -p ./submission

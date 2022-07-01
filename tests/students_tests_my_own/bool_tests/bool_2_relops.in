@@ -1,0 +1,145 @@
+void main(){
+	int big = 100;
+	int big2 = 100 b;
+	byte small = 6 b;
+	byte small2 = small;
+
+	// ==: true true false false
+	if(big == big2){
+		print("true");
+	} else {
+		print("false");
+	}
+	if(small == small2){
+		print("true");
+	} else {
+		print("false");
+	}
+	if(big == small){
+		print("true");
+	} else {
+		print("false");
+	}
+	if(small == big){
+		print("true");
+	} else {
+		print("false");
+	}
+	
+
+
+	// !=: false false true true
+	if(big != big2){
+		print("true");
+	} else {
+		print("false");
+	}
+	if(small != small2){
+		print("true");
+	} else {
+		print("false");
+	}
+	if(big != small){
+		print("true");
+	} else {
+		print("false");
+	}
+	if(small != big){
+		print("true");
+	} else {
+		print("false");
+	}
+	
+
+	// <: false false false true
+	if(big < big2){
+		print("true");
+	} else {
+		print("false");
+	}
+	if(small < small2){
+		print("true");
+	} else {
+		print("false");
+	}
+	if(big < small){
+		print("true");
+	} else {
+		print("false");
+	}
+	if(small < big){
+		print("true");
+	} else {
+		print("false");
+	}
+	
+
+	// <=: true true false true
+	if(big <= big2){
+		print("true");
+	} else {
+		print("false");
+	}
+	if(small <= small2){
+		print("true");
+	} else {
+		print("false");
+	}
+	if(big <= small){
+		print("true");
+	} else {
+		print("false");
+	}
+	if(small <= big){
+		print("true");
+	} else {
+		print("false");
+	}
+	
+
+	// >: false false true false
+	if(big > big2){
+		print("true");
+	} else {
+		print("false");
+	}
+	if(small > small2){
+		print("true");
+	} else {
+		print("false");
+	}
+	if(big > small){
+		print("true");
+	} else {
+		print("false");
+	}
+	if(small > big){
+		print("true");
+	} else {
+		print("false");
+	}
+	
+
+	// >=: true true true false
+	if(big >= big2){
+		print("true");
+	} else {
+		print("false");
+	}
+	if(small >= small2){
+		print("true");
+	} else {
+		print("false");
+	}
+	if(big >= small){
+		print("true");
+	} else {
+		print("false");
+	}
+	if(small >= big){
+		print("true");
+	} else {
+		print("false");
+	}
+	
+}

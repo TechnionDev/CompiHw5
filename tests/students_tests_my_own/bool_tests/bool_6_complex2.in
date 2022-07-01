@@ -1,0 +1,44 @@
+void main(){
+	bool x;
+	if(x){
+		print("true");
+	} else {
+		print("false");
+	}
+
+	bool y = 30 != 30;
+	bool z = ((1 b == 1 and not y) or ((true))) and not not not x and not not false or true;
+	if(z){
+		print("true");
+	} else {
+		print("false");
+	}
+
+	x = not ((0==1)
+		or((10==1)
+		or((11==1)
+		or((12==1)
+		or((13==1)
+		or((14==1)
+		or((15==1)
+		or((16==1)
+		or((17==1)
+		or((18==1)
+		or((19==1)
+		or((111==1)
+		or((1==111)
+		or((111==1)
+		or((1==111)
+		or((111==1)
+		or((1==111)
+		or((111==1)
+		or((1==111)
+		or (111==1)
+		))))))))))))))))))); // checking whether you use registers to save truth values
+
+	if(x){
+		print("true");
+	} else {
+		print("false");
+	}
+}

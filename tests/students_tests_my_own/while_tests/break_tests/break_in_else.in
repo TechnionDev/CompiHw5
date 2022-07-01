@@ -1,0 +1,47 @@
+void main(){
+	int a = 5;
+	byte c = 4 b;
+	bool x = true;
+	while( a < 10){		
+		print("in first loop");
+		printi(a);
+		
+		
+		while(c < 6 b){
+			print("in second loop");
+			printi(c);
+			
+			if( c == 4 ){
+				print("second loop didn't break");
+				printi(c);
+				
+				c = c + 1 b;				
+			}
+			else{
+				print("break second loop");
+				printi(c);
+				
+				break;
+			}
+
+			print("finished iteration in second loop");	
+		}
+		
+		if(not x or a<=7 ){
+			print("first loop didn't break");
+			printi(a);
+			
+		}
+
+		else{
+			print("break first loop");
+			printi(a);
+			
+			break;
+		}	
+		a = a+1;
+		c = c - 1 b;
+		print("finished iteration in first loop");
+	}
+	print("bye bye");
+}
