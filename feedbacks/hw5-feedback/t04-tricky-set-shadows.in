@@ -1,0 +1,8 @@
+void main() {
+   auto x = 5;
+   auto y = x;
+   y = y + 5;
+   int z = x;
+   x = y + z;
+   printi(x);
+}

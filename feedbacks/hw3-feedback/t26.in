@@ -1,0 +1,9 @@
+int foo() {
+  auto x = 3;
+  return x;
+}
+
+void main() {
+  printi(foo());
+  return;
+}

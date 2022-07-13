@@ -1,0 +1,19 @@
+int myfunc(int x) {
+    x = x + 3;
+    return x;
+}
+
+int return6(int x) {
+    auto y = myfunc(x);
+    return 6;
+}
+
+void main() {
+    bool c = false;
+    if (not c) {
+        int x = 6;
+        printi(return6(x));
+    }
+    else
+        syntax error;
+}

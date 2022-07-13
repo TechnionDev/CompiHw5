@@ -1,0 +1,7 @@
+// Long buffer?
+
+int main () {
+    auto x = 1;
+    auto y = "Hello"
+    return 0;
+}

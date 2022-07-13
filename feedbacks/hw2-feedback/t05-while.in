@@ -1,0 +1,30 @@
+int foo () {
+    while (1 < 2) {
+        int x = 12;
+        if (x > 12) break;
+        int y = 7;
+        if (y > 7) continue;
+        while (y < 7) {
+            break;
+        }
+        break;
+    }
+}
+
+int bar () {
+    while (1 < 2) {
+        int x = 12;
+        if (x > 12) break;
+        int y = 7;
+        if (y > 7) continue;
+        while (y < 7) {
+            break;
+        }
+    }
+    break;
+}
+
+void main () {
+    int x = foo();
+    int y = bar();
+}

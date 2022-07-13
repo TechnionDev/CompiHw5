@@ -1,0 +1,12 @@
+t03-bare-block.in: PASSED!
+t04-calls.in: PASSED!
+t05-while.in: PASSED!
+t06-print.in: PASSED!
+t07-empty.in: PASSED!
+t08-function-signatures.in: PASSED!
+t09-stress-math.in: PASSED!
+t10-bytes.in: PASSED!
+t11-while.in: PASSED!
+t12-const.in: PASSED!
+t1.in: PASSED!
+t2.in: PASSED!

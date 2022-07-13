@@ -1,0 +1,6 @@
+void main() {
+  auto int x;
+  auto int y = 5;
+  auto string z = "hello";
+  
+}
